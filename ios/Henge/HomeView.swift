@@ -96,7 +96,7 @@ struct HomeView: View {
                 .frame(height: 190)
                 .background(Desk.raised.opacity(0.5), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             Text("No Mac yet").font(.system(size: 24, weight: .bold))
-            Text("Install macOS on this \(Device.name), or bring in a Mac made on a computer.")
+            Text(L("Install macOS on this \(Device.name), or bring in a Mac made on a computer."))
                 .font(.system(size: 15)).foregroundStyle(Desk.dim).multilineTextAlignment(.center)
             Button("Install macOS") { tab = .install }.buttonStyle(DeskButtonStyle())
             Button("Bring in a Mac") { picking = true }
@@ -116,7 +116,7 @@ struct HomeView: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(other.name).font(.system(size: 16, weight: .medium)).foregroundStyle(Desk.text)
-                                Text(other.summary).font(.system(size: 13)).foregroundStyle(Desk.dim)
+                                Text(L(other.summary)).font(.system(size: 13)).foregroundStyle(Desk.dim)
                             }
                             Spacer()
                             Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Desk.faint)
@@ -170,7 +170,7 @@ private struct MacHero: View {
                     HStack {
                         Text(mac.name).font(.system(size: 24, weight: .bold)).foregroundStyle(Desk.text).lineLimit(1)
                         Spacer()
-                        Text(jitReady ? "JIT on" : "JIT off")
+                        Text(L(jitReady ? "JIT on" : "JIT off"))
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(jitReady ? Desk.good : Desk.warn)
                             .padding(.horizontal, 11)
@@ -180,7 +180,7 @@ private struct MacHero: View {
                     }
                     .padding(.top, 15)
                     .padding(.horizontal, 5)
-                    Text("\(mac.summary) · \(cpus) CPUs")
+                    Text(L("\(mac.summary) · \(cpus) CPUs"))
                         .font(.system(size: 15))
                         .foregroundStyle(Desk.dim)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -201,7 +201,7 @@ private struct MacHero: View {
                 .padding(.top, 15)
             } else {
                 if let jitNote {
-                    Text(jitNote).font(.system(size: 13)).foregroundStyle(Desk.dim)
+                    Text(L(jitNote)).font(.system(size: 13)).foregroundStyle(Desk.dim)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 5)
                         .padding(.top, 10)
@@ -238,8 +238,8 @@ private struct FactTile: View {
     let value: String
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(title).font(.system(size: 13)).foregroundStyle(Desk.dim)
-            Text(value).font(.system(size: 21, weight: .bold)).foregroundStyle(Desk.text).lineLimit(1).minimumScaleFactor(0.7)
+            Text(L(title)).font(.system(size: 13)).foregroundStyle(Desk.dim)
+            Text(L(value)).font(.system(size: 21, weight: .bold)).foregroundStyle(Desk.text).lineLimit(1).minimumScaleFactor(0.7)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(15)
@@ -256,9 +256,9 @@ struct NoticeRow: View {
     var body: some View {
         HStack(spacing: 11) {
             Image(systemName: symbol).foregroundStyle(tint)
-            Text(text).font(.system(size: 15)).foregroundStyle(Desk.text).multilineTextAlignment(.leading)
+            Text(L(text)).font(.system(size: 15)).foregroundStyle(Desk.text).multilineTextAlignment(.leading)
             Spacer(minLength: 4)
-            if let trailing { Text(trailing).font(.system(size: 15, weight: .semibold)).foregroundStyle(Desk.accentLight) }
+            if let trailing { Text(L(trailing)).font(.system(size: 15, weight: .semibold)).foregroundStyle(Desk.accentLight) }
         }
         .padding(14)
         .deskCard()

@@ -140,12 +140,12 @@ import UserNotifications
         log("code shown")
         #if compiler(>=6.2)
         if #available(iOS 26.0, *), let task = continued as? BGContinuedProcessingTask {
-            task.updateTitle("Pairing code \(pin)", subtitle: "Enter it on this \(Self.deviceKind) to pair with Henge")
+            task.updateTitle(L("Pairing code \(pin)"), subtitle: L("Enter it on this \(Self.deviceKind) to pair with Henge"))
             task.progress.completedUnitCount = 1
         }
         #endif
         if UIApplication.shared.applicationState != .active {
-            notify("Henge pairing code: \(pin)", body: "Enter this code on your \(Self.deviceKind) to finish pairing.")
+            notify(L("Henge pairing code: \(pin)"), body: L("Enter this code on your \(Self.deviceKind) to finish pairing."))
         }
     }
 
@@ -163,7 +163,7 @@ import UserNotifications
                 phase = .paired(device: device ?? "this \(Self.deviceKind)")
                 log("paired")
                 if UIApplication.shared.applicationState != .active {
-                    notify("Paired with Henge", body: "Return to Henge to finish setting up JIT.")
+                    notify(L("Paired with Henge"), body: L("Return to Henge to finish setting up JIT."))
                 }
                 endBackground(success: true)
             } catch {
@@ -272,8 +272,8 @@ import UserNotifications
             guard ok else { log("register refused"); backgroundLimited = true; return }
             registered = identifier
         }
-        let request = BGContinuedProcessingTaskRequest(identifier: identifier, title: "Pairing with Henge",
-                                                       subtitle: "Settings › Privacy & Security › Developer Mode")
+        let request = BGContinuedProcessingTaskRequest(identifier: identifier, title: L("Pairing with Henge"),
+                                                       subtitle: L("Settings › Privacy & Security › Developer Mode"))
         request.strategy = .fail
         do {
             try BGTaskScheduler.shared.submit(request)
@@ -290,7 +290,7 @@ import UserNotifications
         continued = task
         task.progress.totalUnitCount = 2
         if case .pin(let pin) = phase {
-            task.updateTitle("Pairing code \(pin)", subtitle: "Enter it on this \(Self.deviceKind) to pair with Henge")
+            task.updateTitle(L("Pairing code \(pin)"), subtitle: L("Enter it on this \(Self.deviceKind) to pair with Henge"))
             task.progress.completedUnitCount = 1
         }
         task.expirationHandler = {

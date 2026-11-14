@@ -527,7 +527,7 @@ struct MacKeyRow: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(on ? Desk.accent : Desk.raised, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
         }
-        .accessibilityLabel(name)
+        .accessibilityLabel(L(name))
     }
 }
 
@@ -711,7 +711,7 @@ struct MacAppScreen: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing).padding(14)
             if !started || !status.isEmpty {
-                Text(status).font(.system(size: 13, weight: .medium)).foregroundStyle(.white.opacity(0.85))
+                Text(L(status)).font(.system(size: 13, weight: .medium)).foregroundStyle(.white.opacity(0.85))
                     .padding(.horizontal, 12).padding(.vertical, 8)
                     .background(.black.opacity(0.55), in: Capsule()).padding(16)
             }

@@ -80,9 +80,15 @@ long henge_share_agent_seen(void);
 void henge_vm_set_display(uint32_t width, uint32_t height);
 /* The panel's physical size; 0, 0 for the default (a ~122 ppi, 1x screen). Before boot. */
 void henge_vm_set_display_mm(uint32_t width_mm, uint32_t height_mm);
+/* While a Mac runs: its screen changes to this size (macOS is told its display's mode list changed). */
+void henge_vm_resize_display(uint32_t width, uint32_t height);
 void henge_vm_key(uint16_t code, int down);
 void henge_vm_key_hid(uint8_t usage, int down); /* a hardware keyboard: iOS gives each key's HID usage */
 void henge_vm_mouse_move(int dx, int dy);
+void henge_vm_mouse_at(int x, int y); /* each 0..32767 across the Mac's screen */
+void henge_vm_mouse_at_button(int button, int down);
+/* Before a Mac starts: whether it gets the USB pointing device henge_vm_mouse_at drives. */
+void henge_vm_set_absolute_pointer(int on);
 void henge_vm_mouse_button(int button, int down);
 /* Wheel units: dy > 0 up, dx > 0 right. */
 void henge_vm_mouse_scroll(int dx, int dy);

@@ -371,6 +371,8 @@ char *henge_share_take_clipboard(void) { return hv_share_take_clipboard(); }
 long henge_share_agent_seen(void) { return hv_share_agent_seen(); }
 
 void henge_vm_set_display(uint32_t width, uint32_t height) { hv_pvg_lite_set_mode(width, height); }
+void henge_vm_set_absolute_pointer(int on) { hv_vm_set_absolute_pointer(on); }
+void henge_vm_resize_display(uint32_t width, uint32_t height) { hv_pvg_lite_resize(width, height); }
 void henge_vm_set_display_mm(uint32_t width_mm, uint32_t height_mm) { hv_pvg_lite_set_size_mm(width_mm, height_mm); }
 
 void henge_vm_key(uint16_t code, int down) {
@@ -386,6 +388,16 @@ void henge_vm_key_hid(uint8_t usage, int down) {
 void henge_vm_mouse_move(int dx, int dy) {
     if (!lock_running()) return;
     hv_vm_mouse_move(dx, dy);
+    pthread_rwlock_unlock(&api_lock);
+}
+void henge_vm_mouse_at(int x, int y) {
+    if (!lock_running()) return;
+    hv_vm_mouse_at(x, y);
+    pthread_rwlock_unlock(&api_lock);
+}
+void henge_vm_mouse_at_button(int button, int down) {
+    if (!lock_running()) return;
+    hv_vm_mouse_at_button(button, down);
     pthread_rwlock_unlock(&api_lock);
 }
 void henge_vm_mouse_button(int button, int down) {

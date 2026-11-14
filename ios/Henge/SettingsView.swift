@@ -10,6 +10,12 @@ struct SettingsView: View {
     @AppStorage(VolumeClicks.modeKey) private var volumeMode = VolumeClicks.Mode.delayHold
     @AppStorage(VolumeClicks.swapKey) private var swapButtons = false
     @AppStorage(PhysicalMouseButtons.swapKey) private var swapMouseButtons = false
+    @AppStorage(HardwareMouse.followKey) private var followPointer = !Device.isPad
+    @AppStorage(Device.followPostureKey) private var screenFollows = false
+    @AppStorage(Device.zoomKey) private var screenZoom = 125
+    @AppStorage(Device.cornerInsetKey) private var cornerInset = 0
+    @AppStorage(MacKeyboard.compactKey) private var compactKeys = true
+    @AppStorage(MacKeyboard.hidesKey) private var hidesKeysForKeyboard = false
     @AppStorage(EngineTuning.refreshKey) private var refreshRate = 60
     @AppStorage(EngineTuning.fastFlushKey) private var fastFlush = true
     @AppStorage(EngineTuning.wfiSpinKey) private var wfiSpin = false
@@ -38,11 +44,11 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section("JIT") {
-                    LabeledContent("Status", value: JITBootstrap.ready ? "On" : "Off")
+                    LabeledContent("Status", value: L(JITBootstrap.ready ? "On" : "Off"))
                     Picker("Method", selection: $jit.method) {
-                        ForEach(JITMethod.allCases) { Text($0.title).tag($0) }
+                        ForEach(JITMethod.allCases) { Text(L($0.title)).tag($0) }
                     }
-                    Text(jit.method == .automatic ? jit.automaticDescription : "Henge uses \(jit.method.title).")
+                    Text(L(jit.method == .automatic ? jit.automaticDescription : "Henge uses \(jit.method.title)."))
                         .font(.footnote).foregroundStyle(.secondary)
                     Button("Set up JIT") { jit.showSetup = true }
                     Toggle("Turn on JIT when Henge opens", isOn: $jitAtLaunch)
@@ -50,21 +56,21 @@ struct SettingsView: View {
                         Text("Henge connects LocalDevVPN first when it is off, and comes back.")
                             .font(.footnote).foregroundStyle(.secondary)
                     }
-                    LabeledContent("Code region", value: "\(JITBootstrap.jitBytes >> 20) MB, claimed once per launch")
+                    LabeledContent("Code region", value: L("\(JITBootstrap.jitBytes >> 20) MB, claimed once per launch"))
                 }
                 .listRowBackground(Desk.card)
                 Section("Memory") {
-                    LabeledContent("Extra memory", value: Entitlements.increasedMemory ? "On" : "Off")
+                    LabeledContent("Extra memory", value: L(Entitlements.increasedMemory ? "On" : "Off"))
                     LabeledContent("Henge's limit", value: ByteText.string(UInt64(Entitlements.memoryLimitAtLaunch)))
                     LabeledContent("Free for Henge", value: ByteText.string(UInt64(henge_available_memory())))
-                    Text(Entitlements.increasedMemory
+                    Text(L(Entitlements.increasedMemory
                          ? "A Mac's memory is kept out of this limit once JIT is on. If iOS refuses that, it uses free storage instead."
-                         : "This install isn't signed with the increased memory limit entitlement. Reinstall Henge with a certificate that has it. Export your Mac first if the reinstall replaces the app's data.")
+                         : "This install isn't signed with the increased memory limit entitlement. Reinstall Henge with a certificate that has it. Export your Mac first if the reinstall replaces the app's data."))
                         .font(.footnote).foregroundStyle(.secondary)
                 }
                 .listRowBackground(Desk.card)
-                if Device.isPad {
-                    Section("Mouse and Trackpad") {
+                if Device.isPad || Device.isFoldable {
+                    Section(L(Device.isPad ? "Mouse and Trackpad" : "Bluetooth Mouse")) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Pointer speed")
                             Slider(value: $mouseSpeed, in: 0.5...3)
@@ -74,10 +80,17 @@ struct SettingsView: View {
                             Text("Scroll speed")
                             Slider(value: $scrollSpeed, in: 0.1...1.5)
                         }
+                        if !Device.isPad {
+                            Toggle("Mac pointer follows the iPhone's pointer", isOn: $followPointer)
+                            Text("The Mac's pointer goes to where the iPhone's own pointer is over the Mac's screen, so there is only one. Turn this off if the pointer jumps or stops. Restart the Mac session to apply.")
+                                .font(.footnote).foregroundStyle(.secondary)
+                        }
                         Toggle("Swap physical right and middle buttons", isOn: $swapMouseButtons)
                         Text("Only enable this if your physical mouse's right and middle buttons are reversed in the Mac. Touch controls stay unchanged. Restart the Mac session to apply.")
                             .font(.footnote).foregroundStyle(.secondary)
-                        Text("A Magic Keyboard or a Bluetooth mouse moves the Mac's pointer. Pointer speed changes apply the next time a Mac starts; scroll speed changes apply immediately.")
+                        Text(L(Device.isPad
+                             ? "A Magic Keyboard or a Bluetooth mouse moves the Mac's pointer. Pointer speed changes apply the next time a Mac starts; scroll speed changes apply immediately."
+                             : "A Bluetooth keyboard types into the Mac and a Bluetooth mouse moves its pointer while a Mac is running. Pointer speed changes apply the next time a Mac starts; scroll speed changes apply immediately."))
                             .font(.footnote).foregroundStyle(.secondary)
                     }
                     .listRowBackground(Desk.card)
@@ -98,7 +111,7 @@ struct SettingsView: View {
                             .pickerStyle(.menu)
                             Toggle("Swap buttons", isOn: $swapButtons)
                         }
-                        Text("Henge is able to emulate a Magic Trackpad, allowing you to perform native macOS gestures using your device's touchscreen.\n\n\(inputDescription)")
+                        Text(L("Henge is able to emulate a Magic Trackpad, allowing you to perform native macOS gestures using your device's touchscreen.\n\n\(inputDescription)"))
                             .font(.footnote).foregroundStyle(.secondary)
                     }
                     .listRowBackground(Desk.card)
@@ -124,6 +137,43 @@ struct SettingsView: View {
                         .font(.footnote).foregroundStyle(.secondary)
                 }
                 .listRowBackground(Desk.card)
+                if Device.isFoldable {
+                    Section("Keyboard on the lower half") {
+                        Picker("Layout", selection: $compactKeys) {
+                            Text("Fits the phone").tag(true)
+                            Text("MacBook").tag(false)
+                        }
+                        .pickerStyle(.segmented)
+                        Text("Fits the phone has five rows of larger keys that fill the room, with esc beside the digits. MacBook has a MacBook's six rows and key shapes, with the function keys.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                        Toggle("Hide it when a real keyboard is connected", isOn: $hidesKeysForKeyboard)
+                        Text("Some Bluetooth mice also count as a keyboard: with this on, the drawn keyboard would go while one is connected.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                    .listRowBackground(Desk.card)
+                    Section("Screen") {
+                        Picker("Size of what the Mac shows", selection: $screenZoom) {
+                            Text("Standard").tag(100)
+                            Text("Larger").tag(125)
+                            Text("Large").tag(150)
+                            Text("Largest").tag(175)
+                        }
+                        Text("Larger makes the Mac's text, menus and windows bigger on the phone, with less room on its desktop. It applies the next time a Mac starts.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                        Picker("Keep clear of the rounded corners", selection: $cornerInset) {
+                            Text("Off").tag(0)
+                            Text("A little").tag(8)
+                            Text("More").tag(14)
+                            Text("Fully").tag(20)
+                        }
+                        Text("The phone's rounded corners cut off the ends of the Mac's menu bar and Dock. This makes the Mac's picture a little smaller so they show, with a thin black edge around it.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                        Toggle("Screen follows how the phone is held", isOn: $screenFollows)
+                        Text("A running Mac's screen changes shape when you turn the phone: it fills the whole phone on its side, and the half above the hinge when upright. Windows may rearrange each time. If the Mac's picture freezes or goes black, turn this off and restart the Mac. Experimental.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                    .listRowBackground(Desk.card)
+                }
                 Section("Instant Resume") {
                     Toggle("Resume where you left off", isOn: $instantResume)
                     Text("When you leave Henge, the running Mac is saved to storage, and opening it again picks up where it was in a few seconds, even after iOS closes Henge. The save is about the size of the Mac's memory in use, compressed. The Mac pauses while Henge is in the background, so its sound stops. Experimental.")
@@ -138,10 +188,10 @@ struct SettingsView: View {
                 .listRowBackground(Desk.card)
                 Section("Appearance") {
                     Picker("Appearance", selection: $appearance) {
-                        ForEach(DeskAppearance.allCases) { Text($0.title).tag($0) }
+                        ForEach(DeskAppearance.allCases) { Text(L($0.title)).tag($0) }
                     }
                     .pickerStyle(.segmented)
-                    Text("System follows the \(Device.name)'s Light or Dark setting. Henge stays dark while a Mac is running.")
+                    Text(L("System follows the \(Device.name)'s Light or Dark setting. Henge stays dark while a Mac is running."))
                         .font(.footnote).foregroundStyle(.secondary)
                 }
                 .listRowBackground(Desk.card)

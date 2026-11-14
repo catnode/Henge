@@ -19,7 +19,9 @@ struct VirtualMac: Identifiable, Codable, Hashable {
     /// m4 fork: the iPad's own panel at Retina density. On by default on iPad, for Macs that never chose.
     var retina: Bool?
     var isRetina: Bool { Device.isPad && (retina ?? false) }
-    var screen: (width: Int, height: Int) { isRetina ? Device.retinaScreen : (screenWidth ?? 1920, screenHeight ?? 1080) }
+    /// The screen chosen for this Mac, before the size of what it shows is applied.
+    var chosenScreen: (width: Int, height: Int) { isRetina ? Device.retinaScreen : (screenWidth ?? 1920, screenHeight ?? 1080) }
+    var screen: (width: Int, height: Int) { isRetina ? chosenScreen : Device.zoomed(chosenScreen) }
     var aspect: CGFloat { CGFloat(screen.width) / CGFloat(screen.height) }
 
     var directory: URL { Machines.directory(for: id) }
@@ -40,8 +42,12 @@ enum GuestMemory {
             .volumeAvailableCapacityForImportantUsage ?? 0
         let room = free > 0 ? UInt64(max(free - (2 << 30), 0)) >> 20 : UInt64.max
         let reach = henge_largest_mapping_mb()
-        let ram = min(UInt64(mac.ramMB), room, reach > 512 ? reach - 512 : 0) / 512 * 512
-        HengeLog.log("session", "guest RAM \(ram) MB (asked \(mac.ramMB), disk room \(room), largest mapping \(reach))")
+        // What the engine maps for itself before the Mac's memory, out of the same piece of address space:
+        // the translator's records come to about three quarters of the code cache. Without extended
+        // addressing that piece is 4 GB, and a 1.5 GB cache left a 3.5 GB Mac nowhere to go (iPhone Duo).
+        let kept = 512 + UInt64(JITBootstrap.jitBytes >> 20) * 3 / 4
+        let ram = min(UInt64(mac.ramMB), room, reach > kept ? reach - kept : 0) / 512 * 512
+        HengeLog.log("session", "guest RAM \(ram) MB (asked \(mac.ramMB), disk room \(room), largest mapping \(reach), kept back \(kept))")
         return ram
     }
 }

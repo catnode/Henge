@@ -101,6 +101,26 @@ jobs:
         working-directory: Henge
         run: zsh ios/scripts/package_ipa.sh
 
+      # package_ipa.sh prints only the error lines. What led up to them is in the build log.
+      - name: Show the build log around its errors
+        if: failure()
+        run: |
+          LOG=Henge/ios/build/DerivedData.buildlog
+          [ -f "$LOG" ] || exit 0
+          grep -n -B40 -A6 -E "error:" "$LOG" | tail -n 400
+          # A compiler that crashed or a failed command says no "error:". Say what did fail, briefly.
+          grep -n -A25 -E "Stack dump|failed with a nonzero exit code|The following build commands failed|fatal error" "$LOG" | cut -c1-400 | tail -n 120 || true
+          # A script phase (the engine's make) that failed: what it said last.
+          grep -n -B30 -E "make(\[[0-9]+\])?: \*\*\*" "$LOG" | cut -c1-400 | tail -n 80 || true
+
+      # The interface's translations ride in .lproj folders; a build without them would be English only.
+      - name: Check the translations are in the app
+        run: |
+          unzip -q -o /Users/runner/Desktop/Henge.ipa 'Payload/Henge.app/*.lproj/*' -d "$RUNNER_TEMP/ipa"
+          ls "$RUNNER_TEMP/ipa/Payload/Henge.app/"*.lproj
+          plutil -lint "$RUNNER_TEMP/ipa/Payload/Henge.app/zh-Hans.lproj/Localizable.strings"
+          plutil -p "$RUNNER_TEMP/ipa/Payload/Henge.app/zh-Hans.lproj/Localizable.strings" | wc -l
+
       - name: Upload Henge.ipa
         uses: actions/upload-artifact@v4
         with:

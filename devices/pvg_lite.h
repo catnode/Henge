@@ -56,6 +56,9 @@ int hv_pvg_trace_on(void);
 /* The size macOS is told its screen is. Set before the machine starts; default 1920 x 1080. */
 void hv_pvg_lite_set_mode(uint32_t width, uint32_t height);
 void hv_pvg_lite_set_size_mm(uint32_t width_mm, uint32_t height_mm);
+/* Any thread, while the machine runs: the screen changes to this size. The display's one mode is replaced
+   and the guest told its mode list changed, as when a virtual Mac's window is resized. */
+void hv_pvg_lite_resize(uint32_t width, uint32_t height);
 
 /* Instant resume (host/snapshot.c). State blobs: called with out NULL they return the size needed. */
 size_t hv_pvg_lite_state(HvPvgLite *p, void *out, size_t cap);

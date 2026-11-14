@@ -9,12 +9,14 @@
    INTx) with two USB HID devices: a boot keyboard on port 1 and a Magic
    Trackpad 2 on port 2: what Virtualization.framework gives a macOS guest as
    its "Virtual USB Keyboard", plus Apple's multitouch pad, so the guest's
-   own gesture engine sees a real trackpad. Changes come from the host UI on
+   own gesture engine sees a real trackpad. Port 3 has a pointer that says
+   where it is on the screen rather than how far it moved (a "tablet"), for a
+   host whose own pointer stays visible and has to coincide with the guest's. Changes come from the host UI on
    any thread (hv_xhci_key, hv_xhci_touch); the CPU thread delivers them
    (hv_xhci_poll). */
 #define HV_XHCI_SLOTS 8
-#define HV_XHCI_PORTS 2
-#define HV_XHCI_DEVICES 2
+#define HV_XHCI_PORTS 3
+#define HV_XHCI_DEVICES 3
 #define HV_XHCI_INTRS 4
 #define HV_XHCI_EPS 32 /* device context index 1..31 */
 #define HV_XHCI_REPORTS 256
@@ -26,6 +28,10 @@
 #define HV_TP_FINGERS 10
 #define HV_TP_REPORTS 64
 #define HV_TP_REPORT_LEN (12 + 9 * HV_TP_FINGERS) /* report ID 2: 12-byte prefix, N x 9-byte fingers */
+/* The absolute pointer: each axis runs 0..HV_AB_RANGE across the guest's screen. */
+#define HV_AB_RANGE 32767
+#define HV_AB_REPORTS 32
+#define HV_AB_REPORT_LEN 6 /* buttons, X and Y (16 bits each), wheel */
 
 typedef struct HvXhciRing {
     uint64_t dequeue; /* guest PA of the next TRB */
@@ -52,7 +58,7 @@ typedef struct HvXhci {
     /* device slots: -1 until the device on the slot's port is addressed */
     int slot_used[HV_XHCI_SLOTS + 1];
     struct HvXhciSlot {
-        int dev;         /* 0 keyboard, 1 trackpad, -1 none */
+        int dev;         /* 0 keyboard, 1 trackpad, 2 absolute pointer, -1 none */
         int configured;
         HvXhciRing ep[HV_XHCI_EPS];
         int ep_running[HV_XHCI_EPS];
@@ -83,6 +89,11 @@ typedef struct HvXhci {
     uint32_t tp_multi_logs; /* multi-finger deliveries logged, capped */
     uint8_t tp_f1[8];   /* feature report 1: the header for the selected sensor register */
     int tp_f1_len;
+    /* the absolute pointer's reports waiting for an IN transfer, and the current one */
+    uint8_t ab_reports[HV_AB_REPORTS][HV_AB_REPORT_LEN];
+    uint32_t ab_rhead, ab_rtail;
+    uint8_t ab_state[HV_AB_REPORT_LEN];
+    uint64_t ab_delivered;
 } HvXhci;
 
 HvXhci *hv_xhci_create(HvMachine *m, HvPcie *bus);
@@ -102,6 +113,12 @@ void hv_xhci_touch(HvXhci *x, int id, int phase, int px, int py, uint32_t ts_ms)
 void hv_xhci_touch_frame(HvXhci *x, uint32_t ts_ms);
 /* Any thread: the pad's full press (a click), down or up. */
 void hv_xhci_touch_button(HvXhci *x, int down);
+/* Any thread: the pointer is at (px, py), each 0..HV_AB_RANGE across the guest's screen. Its buttons
+   stay with whichever device the caller already clicks with. */
+void hv_xhci_pointer(HvXhci *x, int px, int py);
+void hv_xhci_pointer_button(HvXhci *x, int button, int down);
+/* Before the machine starts: whether it has port 3's absolute pointer at all (default: no). */
+void hv_xhci_set_pointer(int on);
 /* CPU thread: hand waiting reports to the guest. */
 void hv_xhci_poll(HvXhci *x);
 

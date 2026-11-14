@@ -1,0 +1,2 @@
+"NSCameraUsageDescription" = "Henge 可以把音量键当作触控板的鼠标按键。接收这些按键需要启用相机；不会录制、保存或显示任何画面。";
+"NSLocalNetworkUsageDescription" = "Henge 使用本地网络与这台 iPhone 配对来开启 JIT，不需要电脑。";

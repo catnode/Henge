@@ -39,6 +39,9 @@ struct Trackpad: UIViewRepresentable {
 
         /* Touchscreen-mode clicking. */
         private var holding = false
+        /* A tap and then a finger put down again and moved drags, as on a MacBook ("tap, then drag"). */
+        private var lastTap = Date.distantPast
+        private var tapDragArmed = false
         private var holdTimer: Timer?
         private let buzz = UIImpactFeedbackGenerator(style: .medium)
         private var tapsClick: Bool { VolumeClicks.inputMode == .touchscreen }
@@ -51,7 +54,11 @@ struct Trackpad: UIViewRepresentable {
         }
 
         /// Over the Mac there is only the Mac's pointer, if iPadOS hasn't locked its own away.
-        func pointerInteraction(_ interaction: UIPointerInteraction, styleFor region: UIPointerRegion) -> UIPointerStyle? { .hidden() }
+        /// On a phone whose pointer the Mac's follows, a pad away from the Mac's picture keeps the system's pointer.
+        func pointerInteraction(_ interaction: UIPointerInteraction, styleFor region: UIPointerRegion) -> UIPointerStyle? {
+            let centre = convert(CGPoint(x: bounds.midX, y: bounds.midY), to: nil)
+            return HardwareMouse.shared.showsSystemPointer(at: centre) ? nil : .hidden()
+        }
 
         required init?(coder: NSCoder) { fatalError("made in code") }
 
@@ -83,6 +90,7 @@ struct Trackpad: UIViewRepresentable {
                 started = Date()
                 travelled = 0
                 mostFingers = 0
+                tapDragArmed = tapsClick && touches.count == 1 && started.timeIntervalSince(lastTap) < 0.35
                 if tapsClick { buzz.prepare() }
             }
             for t in touches {
@@ -99,6 +107,7 @@ struct Trackpad: UIViewRepresentable {
             mostFingers = max(mostFingers, fingers.count)
             guard tapsClick else { return }
             if fingers.count >= 2 {
+                tapDragArmed = false
                 cancelHold()
                 if holding { /* a drag becomes a multi-finger gesture */
                     holding = false
@@ -119,6 +128,13 @@ struct Trackpad: UIViewRepresentable {
                 let (x, y) = sensor(t)
                 henge_vm_touch(fingers[i].id, 1, x, y, ts)
                 moved = true
+            }
+            if tapDragArmed, !holding, fingers.count == 1, travelled >= Self.tapDistance {
+                tapDragArmed = false
+                cancelHold()
+                holding = true
+                henge_vm_mouse_button(0, 1)
+                buzz.impactOccurred()
             }
             /* Moving means pointing or a gesture, not a tap or a press-to-drag. */
             if tapsClick && travelled >= Self.tapDistance && !holding { cancelHold() }
@@ -151,7 +167,7 @@ struct Trackpad: UIViewRepresentable {
                     holding = false
                     henge_vm_mouse_button(0, 0) /* let go of the drag */
                 } else if quick && still {
-                    if mostFingers == 1 { click(0) }      /* a tap is a left click */
+                    if mostFingers == 1 { click(0); lastTap = Date() } /* a tap is a left click */
                     else if mostFingers == 2 { click(1) } /* a two-finger tap is a right click */
                 }
             }
@@ -195,7 +211,7 @@ struct MouseButton: View {
     @State private var down = false
 
     var body: some View {
-        Text(title)
+        Text(L(title))
             .font(.system(size: 15))
             .foregroundStyle(down ? Desk.text : Desk.dim)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -215,6 +231,6 @@ struct MouseButton: View {
                         StickyKeys.shared.releaseAll()
                     }
             )
-            .accessibilityLabel(title)
+            .accessibilityLabel(L(title))
     }
 }
