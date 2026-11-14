@@ -214,6 +214,8 @@
 "Bluetooth Mouse" = "蓝牙鼠标";
 "Pointer speed" = "指针速度";
 "Reverse scrolling" = "反向滚动";
+"Full screen" = "全屏";
+"Tap with four fingers to leave full screen" = "四指轻点屏幕可退出全屏";
 "Mac pointer follows the iPhone's pointer" = "Mac 指针跟随 iPhone 的指针";
 "The Mac's pointer goes to where the iPhone's own pointer is over the Mac's screen, so there is only one. Turn this off if the pointer jumps or stops. Restart the Mac session to apply." = "iPhone 的指针移到 Mac 屏幕上哪里，Mac 的指针就到哪里，屏幕上只剩一个指针。如果指针乱跳或不动，请关闭此项。重新启动 Mac 后生效。";
 "Swap physical right and middle buttons" = "交换实体鼠标的右键和中键";

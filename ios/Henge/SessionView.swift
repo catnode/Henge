@@ -36,6 +36,7 @@ struct SessionView: View {
     @State private var showDetails = false
     @State private var controlsHidden = false
     @State private var showRevealHint = false
+    @State private var fullScreen = false // nothing over the Mac at all: no controls, no status bar
     @State private var pointerRefused = false
     @AppStorage("henge.controls.hintsShown") private var revealHintsShown = 0
     @AppStorage(VolumeClicks.inputModeKey) private var inputMode = VolumeClicks.InputMode.touchscreen
@@ -117,7 +118,7 @@ struct SessionView: View {
                             .allowsHitTesting(false)
                     }
                     if showRevealHint {
-                        Label("Tap with four fingers to show the controls", systemImage: "hand.tap")
+                        Label(L(fullScreen ? "Tap with four fingers to leave full screen" : "Tap with four fingers to show the controls"), systemImage: "hand.tap")
                             .font(.system(size: 15, weight: .medium))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 18).padding(.vertical, 12)
@@ -165,11 +166,12 @@ struct SessionView: View {
             .onReceive(NotificationCenter.default.publisher(for: Trackpad.revealTap)) { _ in
                 controlsHidden = false
                 showRevealHint = false
+                fullScreen = false
             }
             .onAppear { shown = layout.shown }
             .onChange(of: layout.shown) { shown = $0 }
         }
-        .statusBarHidden(zoomed || Device.isPad)
+        .statusBarHidden(zoomed || Device.isPad || fullScreen)
         .persistentSystemOverlays(.hidden)
         .sheet(isPresented: $showDetails) { details }
         .confirmationDialog(L("Shut down \(mac.name)?"), isPresented: $confirmStop, titleVisibility: .visible) {
@@ -412,6 +414,15 @@ struct SessionView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) { showRevealHint = false }
     }
 
+    /// Only the Mac on the screen: the controls and the status bar go. Four fingers bring them back, and it says so each time.
+    private func enterFullScreen() {
+        fullScreen = true
+        controlsHidden = true
+        typing = false
+        showRevealHint = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { showRevealHint = false }
+    }
+
     private func tool(_ symbol: String, _ label: String, tint: Color = Desk.text, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
@@ -433,6 +444,9 @@ struct SessionView: View {
             tool("keyboard", "Keyboard", tint: .white) { typing.toggle() }
             pasteTool
             tool(zoomed ? "minus.magnifyingglass" : "plus.magnifyingglass", zoomed ? "Zoom out" : "Zoom in", tint: zoomed ? Desk.accentLight : .white) { zoomed.toggle() }
+            if landscape && !zoomed {
+                tool("arrow.up.left.and.arrow.down.right", "Full screen", tint: .white) { enterFullScreen() }
+            }
             tool("info.circle", "Details", tint: .white) { showDetails = true }
             Rectangle().fill(Color.white.opacity(0.3)).frame(width: 1, height: 22).padding(.horizontal, 4)
             tool("power", "Shut down", tint: Desk.bad) { stopTapped() }
@@ -624,6 +638,7 @@ struct SessionView: View {
         zoomed = false
         controlsHidden = false
         showRevealHint = false
+        fullScreen = false
         zoomCentre = CGPoint(x: 0.5, y: 0.5)
         map = nil
         showWallpaperTip = false
