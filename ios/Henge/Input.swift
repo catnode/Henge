@@ -187,6 +187,9 @@ final class StickyKeys: ObservableObject {
         }
     }
 
+    /// A key that is already down in the Mac, to let go with the rest after the next key.
+    func adopt(_ code: UInt16) { down.insert(code) }
+
     func releaseAll() {
         guard !down.isEmpty else { return }
         for code in down { henge_vm_key(code, 0) }
