@@ -170,7 +170,7 @@ struct SessionView: View {
         .statusBarHidden(zoomed || Device.isPad)
         .persistentSystemOverlays(.hidden)
         .sheet(isPresented: $showDetails) { details }
-        .confirmationDialog("Shut down \(mac.name)?", isPresented: $confirmStop, titleVisibility: .visible) {
+        .confirmationDialog(L("Shut down \(mac.name)?"), isPresented: $confirmStop, titleVisibility: .visible) {
             Button("Shut Down", role: .destructive) { finish() }
         } message: {
             Text("This turns the Mac off at once. Anything not saved on it is lost.")
@@ -383,7 +383,7 @@ struct SessionView: View {
     }
 
     private func hint(_ strong: String, _ rest: String) -> some View {
-        (Text(strong).foregroundColor(Desk.dim).fontWeight(.semibold) + Text(" \(rest)").foregroundColor(Desk.faint))
+        (Text(L(strong)).foregroundColor(Desk.dim).fontWeight(.semibold) + Text(" " + L(rest)).foregroundColor(Desk.faint))
             .font(.system(size: 15))
     }
 
@@ -415,7 +415,7 @@ struct SessionView: View {
                 .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
         }
-        .accessibilityLabel(label)
+        .accessibilityLabel(L(label))
     }
 
     // MARK: Filling the phone
@@ -501,7 +501,7 @@ struct SessionView: View {
     private func errorCard(_ text: String, _ layout: Layout) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("This Mac could not start").font(.system(size: 17, weight: .semibold))
-            Text(text).font(.system(size: 14)).foregroundStyle(Desk.dim)
+            Text(L(text)).font(.system(size: 14)).foregroundStyle(Desk.dim)
             Button("Close") { close() }.font(.system(size: 15, weight: .semibold)).foregroundStyle(Desk.accentLight)
         }
         .padding(18)
@@ -522,11 +522,11 @@ struct SessionView: View {
     private var details: some View {
         NavigationStack {
             List {
-                Section(phase) {
-                    LabeledContent("CPUs on", value: "\(cpusOn) of \(cpus)")
-                    LabeledContent("Temperature", value: Self.thermalLabel(thermalState))
+                Section(L(phase)) {
+                    LabeledContent("CPUs on", value: "\(cpusOn) / \(cpus)")
+                    LabeledContent("Temperature", value: L(Self.thermalLabel(thermalState)))
                     LabeledContent("Translated blocks", value: String(format: "%.1f M/s", blocksPerSecond / 1e6))
-                    LabeledContent("Network frames", value: "\(framesOut) out, \(framesIn) in")
+                    LabeledContent("Network frames", value: L("\(framesOut) out, \(framesIn) in"))
                     LabeledContent("Up", value: "\(Int(Date().timeIntervalSince(started))) s")
                 }
                 Section("Display") {
@@ -550,7 +550,7 @@ struct SessionView: View {
                         .font(.footnote).foregroundStyle(.secondary)
                 }
                 Section("Sharing") {
-                    LabeledContent("Clipboard and folder", value: helperRunning ? "On" : "Not set up")
+                    LabeledContent("Clipboard and folder", value: L(helperRunning ? "On" : "Not set up"))
                     if !helperRunning {
                         Button("Type the Set Up Command") {
                             showDetails = false
@@ -560,9 +560,9 @@ struct SessionView: View {
                             }
                         }
                     }
-                    Text(helperRunning
+                    Text(L(helperRunning
                          ? "Put files in Files, Henge, Shared to see them in the Henge folder in this Mac's home folder. What you copy on the Mac is copied here too, and the paste button pastes from here into the Mac."
-                         : "Once for each Mac: open Terminal on the Mac, tap this, then press Return. When macOS asks about henge-agent and local networks, choose Allow. It types \(Sharing.setUpCommand) and needs the Mac's keyboard layout to be U.S.")
+                         : "Once for each Mac: open Terminal on the Mac, tap this, then press Return. When macOS asks about henge-agent and local networks, choose Allow. It types \(Sharing.setUpCommand) and needs the Mac's keyboard layout to be U.S."))
                         .font(.footnote).foregroundStyle(.secondary)
                 }
                 Section("Lighter macOS") {

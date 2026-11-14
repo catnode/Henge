@@ -28,13 +28,13 @@ struct MacSettingsView: View {
                     HStack(alignment: .firstTextBaseline) {
                         Text("\(mac.ramMB / 1024) GB").font(.system(size: 26, weight: .bold))
                         Spacer()
-                        Text(Entitlements.increasedMemory ? "Outside the app's limit once JIT is on" : "Used from free storage if needed")
+                        Text(L(Entitlements.increasedMemory ? "Outside the app's limit once JIT is on" : "Used from free storage if needed"))
                             .font(.system(size: 13)).foregroundStyle(Desk.dim).multilineTextAlignment(.trailing)
                     }
                     Stepper("Memory", value: Binding(get: { mac.ramMB / 1024 }, set: { mac.ramMB = $0 * 1024; save() }), in: Device.memoryChoices)
                         .font(.system(size: 16))
                     if let note = Device.memoryNote(mac.ramMB / 1024) {
-                        Text(note).font(.system(size: 13)).foregroundStyle(Desk.dim)
+                        Text(L(note)).font(.system(size: 13)).foregroundStyle(Desk.dim)
                     }
                 }
                 .padding(17)
@@ -78,12 +78,12 @@ struct MacSettingsView: View {
                                 Text("Retina").tag("retina")
                                 Text("Performance").tag("performance")
                             }
-                            Text("Fit this \(Device.name)").tag("fit")
+                            Text(L("Fit this \(Device.name)")).tag("fit")
                             if Device.isFoldable { Text("Laptop").tag("laptop") }
                             Text("16:9").tag("wide")
                         }
                         .pickerStyle(.segmented)
-                        Text("\(mac.screen.width) × \(mac.screen.height). \(Device.isPad ? "Performance renders about 30% fewer pixels. " : "")\(Device.isFoldable ? "Laptop fills the half above the hinge when the phone is upright. " : "")Changes apply the next time this Mac starts.")
+                        Text("\(mac.screen.width) × \(mac.screen.height). " + (Device.isPad ? L("Performance renders about 30% fewer pixels. ") : "") + (Device.isFoldable ? L("Laptop fills the half above the hinge when the phone is upright. ") : "") + L("Changes apply the next time this Mac starts."))
                             .font(.system(size: 13)).foregroundStyle(Desk.dim)
                     }
                     .padding(17)
@@ -93,9 +93,9 @@ struct MacSettingsView: View {
                 DeskHeading("Storage")
                 VStack(spacing: 11) {
                     HStack {
-                        Text("\(ByteText.string(UInt64(max(mac.bytesUsed, 0)))) used").font(.system(size: 16))
+                        Text(L("\(ByteText.string(UInt64(max(mac.bytesUsed, 0)))) used")).font(.system(size: 16))
                         Spacer()
-                        Text("of \(ByteText.string(UInt64(max(mac.diskBytes, 0))))").font(.system(size: 16)).foregroundStyle(Desk.dim)
+                        Text(L("of \(ByteText.string(UInt64(max(mac.diskBytes, 0))))")).font(.system(size: 16)).foregroundStyle(Desk.dim)
                     }
                     DeskBar(fraction: Double(mac.bytesUsed) / Double(max(mac.diskBytes, 1)))
                 }
@@ -119,13 +119,13 @@ struct MacSettingsView: View {
             case .failure(let error): machines.lastError = error.localizedDescription
             }
         }
-        .confirmationDialog("Delete \(mac.name)?", isPresented: $confirmDelete, titleVisibility: .visible) {
+        .confirmationDialog(L("Delete \(mac.name)?"), isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
                 machines.delete(mac.id)
                 dismiss()
             }
         } message: {
-            Text("Its disk is removed from this \(Device.name).")
+            Text(L("Its disk is removed from this \(Device.name)."))
         }
     }
 
@@ -133,7 +133,7 @@ struct MacSettingsView: View {
         VStack(spacing: 0) {
             if let name = machines.exporting {
                 VStack(alignment: .leading, spacing: 9) {
-                    Text("Exporting \(name)… keep Henge open").font(.system(size: 15))
+                    Text(L("Exporting \(name)… keep Henge open")).font(.system(size: 15))
                     DeskBar(fraction: machines.exported)
                 }
                 .padding(17)
@@ -143,7 +143,7 @@ struct MacSettingsView: View {
             if let folder = machines.lastExport {
                 divider
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Saved in Files, under Henge, Exports, \(folder.lastPathComponent). Deleting Henge deletes it too, so move it somewhere else first.")
+                    Text(L("Saved in Files, under Henge, Exports, \(folder.lastPathComponent). Deleting Henge deletes it too, so move it somewhere else first."))
                         .font(.system(size: 13)).foregroundStyle(Desk.dim)
                     Button("Move Out of Henge…") { movingExport = true }
                         .font(.system(size: 15, weight: .semibold)).foregroundStyle(Desk.accentLight)
@@ -162,7 +162,7 @@ struct MacSettingsView: View {
     private func row(_ title: String, symbol: String?, tint: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack {
-                Text(title).font(.system(size: 16)).foregroundStyle(tint)
+                Text(L(title)).font(.system(size: 16)).foregroundStyle(tint)
                 Spacer()
                 if let symbol { Image(systemName: symbol).foregroundStyle(tint) }
             }

@@ -109,6 +109,14 @@ jobs:
           [ -f "$LOG" ] || exit 0
           grep -n -B40 -A6 -E "error:" "$LOG" | tail -n 400
 
+      # The interface's translations ride in .lproj folders; a build without them would be English only.
+      - name: Check the translations are in the app
+        run: |
+          unzip -q -o /Users/runner/Desktop/Henge.ipa 'Payload/Henge.app/*.lproj/*' -d "$RUNNER_TEMP/ipa"
+          ls "$RUNNER_TEMP/ipa/Payload/Henge.app/"*.lproj
+          plutil -lint "$RUNNER_TEMP/ipa/Payload/Henge.app/zh-Hans.lproj/Localizable.strings"
+          plutil -p "$RUNNER_TEMP/ipa/Payload/Henge.app/zh-Hans.lproj/Localizable.strings" | wc -l
+
       - name: Upload Henge.ipa
         uses: actions/upload-artifact@v4
         with:

@@ -36,7 +36,7 @@ struct InstallView: View {
                 .deskColumn()
             }
             .background(Desk.page)
-            .navigationTitle(installer.busy ? "Installing" : "Install macOS")
+            .navigationTitle(L(installer.busy ? "Installing" : "Install macOS"))
             .task {
                 while !Task.isCancelled { // the region may be claimed after a hand-off to StikDebug
                     jitReady = JITBootstrap.ready
@@ -64,7 +64,7 @@ struct InstallView: View {
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("Delete the \(r.name) download")
+                        .accessibilityLabel(L("Delete the \(r.name) download"))
                         .padding(.trailing, 6)
                     }
                 }
@@ -103,7 +103,7 @@ struct InstallView: View {
             .padding(.horizontal, 17)
             .padding(.vertical, 10)
             if let note = Device.memoryNote(ramGB) {
-                Text(note)
+                Text(L(note))
                     .font(.system(size: 13))
                     .foregroundStyle(Desk.dim)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -118,14 +118,14 @@ struct InstallView: View {
         }
         .deskCard()
 
-        Button(Installer.haveImage(release) ? "Install" : "Download and Install") {
+        Button(L(Installer.haveImage(release) ? "Install" : "Download and Install")) {
             installer.start(release, name: name.isEmpty ? "Mac" : name, ramMB: ramGB * 1024, cpus: cpus, keepImage: !deleteAfter)
         }
         .buttonStyle(DeskButtonStyle(enabled: jitReady && !Device.chipTooOld))
         .disabled(!jitReady || Device.chipTooOld)
         .padding(.top, 20)
-        Text(Device.chipTooOld ? Device.chipTooOldText : jitReady ? "Keep Henge open and the \(Device.name) plugged in. Needs about \(ByteText.string(UInt64(Installer.spaceNeeded(release)))) free."
-                                : JITBootstrap.lastFailure ?? "Turn on JIT first. \(jit.automaticDescription)")
+        Text(L(Device.chipTooOld ? Device.chipTooOldText : jitReady ? "Keep Henge open and the \(Device.name) plugged in. Needs about \(ByteText.string(UInt64(Installer.spaceNeeded(release)))) free."
+                                : JITBootstrap.lastFailure ?? "Turn on JIT first. \(jit.automaticDescription)"))
             .font(.system(size: 13))
             .foregroundStyle(Desk.dim)
             .multilineTextAlignment(.center)
@@ -143,14 +143,14 @@ struct InstallView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(r.name).font(.system(size: 16, weight: .medium)).foregroundStyle(Desk.text)
                 if let size = Installer.imageSize(r) {
-                    Text("Downloaded, \(ByteText.string(UInt64(size)))").font(.system(size: 13)).foregroundStyle(Desk.good)
+                    Text(L("Downloaded, \(ByteText.string(UInt64(size)))")).font(.system(size: 13)).foregroundStyle(Desk.good)
                 } else if let part = Installer.partSize(r) {
-                    Text("\(ByteText.string(UInt64(part))) of \(ByteText.string(UInt64(r.bytes))) downloaded: goes on from there")
+                    Text(L("\(ByteText.string(UInt64(part))) of \(ByteText.string(UInt64(r.bytes))) downloaded: goes on from there"))
                         .font(.system(size: 13)).foregroundStyle(Desk.dim)
                 } else {
-                    Text("\(ByteText.string(UInt64(r.bytes))) download").font(.system(size: 13)).foregroundStyle(Desk.dim)
+                    Text(L("\(ByteText.string(UInt64(r.bytes))) download")).font(.system(size: 13)).foregroundStyle(Desk.dim)
                 }
-                Text(r.note).font(.system(size: 13)).foregroundStyle(Desk.dim)
+                Text(L(r.note)).font(.system(size: 13)).foregroundStyle(Desk.dim)
             }
             Spacer()
             if release == r { Image(systemName: "checkmark").font(.system(size: 15, weight: .bold)).foregroundStyle(Desk.accentLight) }
@@ -194,7 +194,7 @@ struct InstallView: View {
     }
 
     @ViewBuilder private var progress: some View {
-        Text("\(release.name) on this \(Device.name). Keep Henge open.")
+        Text(L("\(release.name) on this \(Device.name). Keep Henge open."))
             .font(.system(size: 16))
             .foregroundStyle(Desk.dim)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -206,7 +206,7 @@ struct InstallView: View {
                 Text("\(Int(fraction * 100))%")
                     .font(.system(size: 66, weight: .bold))
                     .monospacedDigit()
-                Text(timeLeft ?? "Step \(stage + 1) of \(Self.stages.count)")
+                Text(L(timeLeft ?? "Step \(stage + 1) of \(Self.stages.count)"))
                     .font(.system(size: 15))
                     .foregroundStyle(Desk.dim)
                     .padding(.top, 2)
@@ -231,7 +231,7 @@ struct InstallView: View {
         VStack(spacing: 0) {
             ForEach(Array(Self.stages.enumerated()), id: \.offset) { i, title in
                 HStack {
-                    Text(title)
+                    Text(L(title))
                         .font(.system(size: 16, weight: i == stage ? .semibold : .regular))
                         .foregroundStyle(i > stage ? Desk.faint : Desk.text)
                     Spacer()
@@ -248,7 +248,7 @@ struct InstallView: View {
         }
         .deskCard()
 
-        Button(details ? "Hide details" : "Show details") { withAnimation { details.toggle() } }
+        Button(L(details ? "Hide details" : "Show details")) { withAnimation { details.toggle() } }
             .font(.system(size: 15, weight: .semibold))
             .foregroundStyle(Desk.accentLight)
             .padding(.top, 14)
@@ -271,7 +271,7 @@ struct InstallView: View {
         VStack(spacing: 14) {
             Image(systemName: "checkmark.circle.fill").font(.system(size: 54)).foregroundStyle(Desk.good).padding(.top, 8)
             Text("Installed").font(.system(size: 24, weight: .bold))
-            Text(text).font(.system(size: 15)).foregroundStyle(Desk.dim).multilineTextAlignment(.center)
+            Text(L(text)).font(.system(size: 15)).foregroundStyle(Desk.dim).multilineTextAlignment(.center)
         }
         .padding(20)
         .frame(maxWidth: .infinity)
@@ -282,7 +282,7 @@ struct InstallView: View {
     @ViewBuilder private func failed(_ text: String) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("It did not work").font(.system(size: 22, weight: .bold))
-            Text(text).font(.system(size: 15))
+            Text(L(text)).font(.system(size: 15))
             Text("Quit Henge (swipe it away) and open it again before trying again: only one Mac can start per launch.")
                 .font(.system(size: 13)).foregroundStyle(Desk.dim)
             Button("Back") { installer.reset() }.buttonStyle(DeskButtonStyle()).padding(.top, 6)

@@ -118,8 +118,8 @@ struct JITSetupFlow: View {
                     .frame(width: 34, height: 34)
                     .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(title).font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.text)
-                    Text(detail).font(.system(size: 13)).foregroundStyle(Theme.textDim)
+                    Text(L(title)).font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.text)
+                    Text(L(detail)).font(.system(size: 13)).foregroundStyle(Theme.textDim)
                         .fixedSize(horizontal: false, vertical: true)
                         .multilineTextAlignment(.leading)
                 }
@@ -187,7 +187,7 @@ struct JITSetupFlow: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 10) {
                     ProgressView().tint(Theme.accent)
-                    Text("Waiting for your \(device)…").font(.system(size: 15, weight: .semibold))
+                    Text(L("Waiting for your \(device)…")).font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Theme.text)
                 }
                 Button("Open Settings") {
@@ -195,8 +195,8 @@ struct JITSetupFlow: View {
                 }
                 .font(.system(size: 14, weight: .semibold))
                 if pairing.backgroundLimited {
-                    Text("This installation can only wait about 30 seconds in the background, "
-                       + "so go to Settings straight away.")
+                    Text(L("This installation can only wait about 30 seconds in the background, "
+                       + "so go to Settings straight away."))
                         .font(.system(size: 13)).foregroundStyle(.orange)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -205,12 +205,12 @@ struct JITSetupFlow: View {
             .padding(16).hengeCard()
         case .pin(let pin):
             VStack(spacing: 8) {
-                Text("Enter this code on your \(device)").font(.system(size: 14))
+                Text(L("Enter this code on your \(device)")).font(.system(size: 14))
                     .foregroundStyle(Theme.textDim)
                 Text(pin).font(.system(size: 40, weight: .bold, design: .monospaced)).tracking(6)
                     .foregroundStyle(Theme.text)
                     .textSelection(.enabled)
-                    .accessibilityLabel("Pairing code \(pin.map(String.init).joined(separator: " "))")
+                    .accessibilityLabel(L("Pairing code \(pin.map(String.init).joined(separator: " "))"))
             }
             .frame(maxWidth: .infinity)
             .padding(18).hengeCard(high: true)
@@ -265,7 +265,7 @@ struct JITSetupFlow: View {
             }
             .padding(16).hengeCard()
         } actions: {
-            Button(LocalDevVPN.actionTitle) { LocalDevVPN.open() }
+            Button(L(LocalDevVPN.actionTitle)) { LocalDevVPN.open() }
                 .buttonStyle(PrimaryButtonStyle())
             Button("It's connected") { path.append(.enable) }
                 .font(.system(size: 15, weight: .medium))
@@ -290,7 +290,7 @@ struct JITSetupFlow: View {
             if jit.busy {
                 HStack(spacing: 11) {
                     ProgressView().tint(Theme.accent)
-                    Text(jit.status ?? "Working…").font(.system(size: 14)).foregroundStyle(Theme.text)
+                    Text(L(jit.status ?? "Working…")).font(.system(size: 14)).foregroundStyle(Theme.text)
                     Spacer(minLength: 0)
                 }
                 .padding(16).hengeCard(high: true)
@@ -300,13 +300,13 @@ struct JITSetupFlow: View {
                 VStack(alignment: .leading, spacing: 10) {
                     outcome(error, ok: false)
                     if jit.advice?.actions.contains(.pairAgain) == true {
-                        Button(OnDevicePairing.isSupported ? "Pair again" : "Import a new pairing file") {
+                        Button(L(OnDevicePairing.isSupported ? "Pair again" : "Import a new pairing file")) {
                             path = [OnDevicePairing.isSupported ? .pairOnDevice : .importFile]
                         }
                         .font(.system(size: 14, weight: .semibold))
                     }
                     if jit.advice?.actions.contains(.connectLocalDevVPN) == true {
-                        Button(LocalDevVPN.actionTitle) { LocalDevVPN.open() }
+                        Button(L(LocalDevVPN.actionTitle)) { LocalDevVPN.open() }
                             .font(.system(size: 14, weight: .semibold))
                     }
                 }
@@ -375,7 +375,7 @@ struct JITSetupFlow: View {
             }
             .padding(16).hengeCard()
             if !JITBootstrap.isTrollStoreInstalled {
-                Label("TrollStore was not found on this \(device). It installs on iOS 14.0 to 17.0.", systemImage: "info.circle")
+                Label(L("TrollStore was not found on this \(device). It installs on iOS 14.0 to 17.0."), systemImage: "info.circle")
                     .font(.system(size: 13)).foregroundStyle(Theme.textDim)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -406,7 +406,7 @@ struct JITSetupFlow: View {
                 Label("Henge was marked as debugged when it opened, so JIT is on.", systemImage: "checkmark.circle.fill")
                     .font(.system(size: 13)).foregroundStyle(.green)
             } else if !JITBootstrap.isJailbroken {
-                Label("No jailbreak was found on this \(device).", systemImage: "info.circle")
+                Label(L("No jailbreak was found on this \(device)."), systemImage: "info.circle")
                     .font(.system(size: 13)).foregroundStyle(Theme.textDim)
             }
         } actions: {
@@ -434,8 +434,8 @@ struct JITSetupFlow: View {
                         .foregroundStyle(Theme.accent)
                         .frame(width: 56, height: 56)
                         .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    Text(title).font(.system(size: 28, weight: .semibold)).foregroundStyle(Theme.text)
-                    Text(subtitle).font(.system(size: 15)).foregroundStyle(Theme.textDim)
+                    Text(L(title)).font(.system(size: 28, weight: .semibold)).foregroundStyle(Theme.text)
+                    Text(L(subtitle)).font(.system(size: 15)).foregroundStyle(Theme.textDim)
                         .fixedSize(horizontal: false, vertical: true)
                     content()
                 }
@@ -466,7 +466,7 @@ struct JITSetupFlow: View {
                 }
             }
             .frame(width: 26, height: 26)
-            Text(.init(text))
+            Text(.init(L(text)))
                 .font(.system(size: 15))
                 .foregroundStyle(Theme.text)
                 .fixedSize(horizontal: false, vertical: true)
@@ -475,7 +475,7 @@ struct JITSetupFlow: View {
     }
 
     private func outcome(_ text: String, ok: Bool) -> some View {
-        Label(text, systemImage: ok ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+        Label(L(text), systemImage: ok ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
             .font(.system(size: 14, weight: .medium))
             .foregroundStyle(ok ? .green : .red)
             .fixedSize(horizontal: false, vertical: true)

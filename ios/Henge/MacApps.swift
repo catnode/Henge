@@ -200,7 +200,7 @@ private struct MacAppRow: View {
             Image(systemName: app.kindSymbol).font(.system(size: 22)).foregroundStyle(app.canRun ? Desk.accent : Desk.faint).frame(width: 34)
             VStack(alignment: .leading, spacing: 3) {
                 Text(app.name).font(.system(size: 17, weight: .semibold)).foregroundStyle(Desk.text).lineLimit(1)
-                Text(app.verdict.title).font(.system(size: 13)).foregroundStyle(app.canRun ? Desk.good : Desk.dim).lineLimit(1)
+                Text(L(app.verdict.title)).font(.system(size: 13)).foregroundStyle(app.canRun ? Desk.good : Desk.dim).lineLimit(1)
             }
             Spacer()
             Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Desk.faint)
@@ -224,31 +224,31 @@ struct MacAppRunView: View {
         ScrollView {
             VStack(spacing: 0) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(app.verdict.title).font(.system(size: 17, weight: .semibold)).foregroundStyle(app.canRun ? Desk.good : Desk.text)
-                    Text(app.verdict.detail).font(.system(size: 14)).foregroundStyle(Desk.dim)
+                    Text(L(app.verdict.title)).font(.system(size: 17, weight: .semibold)).foregroundStyle(app.canRun ? Desk.good : Desk.text)
+                    Text(L(app.verdict.detail)).font(.system(size: 14)).foregroundStyle(Desk.dim)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading).padding(17).deskCard()
 
                 DeskHeading("About")
                 VStack(alignment: .leading, spacing: 6) {
                     if !app.identifier.isEmpty { LabeledContent("Identifier", value: app.identifier) }
-                    LabeledContent("Code", value: [app.arm64 ? "Apple silicon" : nil, app.intel ? "Intel" : nil].compactMap { $0 }.joined(separator: " and "))
-                    if !app.minMacOS.isEmpty { LabeledContent("Needs macOS", value: app.minMacOS + " or later") }
+                    LabeledContent("Code", value: [app.arm64 ? "Apple silicon" : nil, app.intel ? "Intel" : nil].compactMap { $0 }.map { L($0) }.joined(separator: L(" and ")))
+                    if !app.minMacOS.isEmpty { LabeledContent("Needs macOS", value: app.minMacOS + L(" or later")) }
                 }
                 .font(.system(size: 15)).padding(17).deskCard()
 
                 if app.canRun {
-                    Button(running ? "Running…" : "Run") { run() }
+                    Button(L(running ? "Running…" : "Run")) { run() }
                         .buttonStyle(DeskButtonStyle()).disabled(running || (result == nil && henge_tl_ran_program() != 0)).padding(.top, 16)
                     Text("Programs run inside Henge, one per launch. After one has run, quit Henge and open it again to run another or to start a Mac.")
                         .font(.system(size: 13)).foregroundStyle(Desk.dim).frame(maxWidth: .infinity, alignment: .leading).padding(.top, 8)
                     if result != nil || !output.isEmpty {
                         DeskHeading("Output")
                         VStack(alignment: .leading, spacing: 8) {
-                            Text(output.isEmpty ? "(nothing printed)" : output)
+                            Text(output.isEmpty ? L("(nothing printed)") : output)
                                 .font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                            if let result { Text(result).font(.system(size: 13, weight: .semibold)).foregroundStyle(Desk.dim) }
+                            if let result { Text(L(result)).font(.system(size: 13, weight: .semibold)).foregroundStyle(Desk.dim) }
                         }
                         .padding(17).deskCard()
                     }
@@ -266,7 +266,7 @@ struct MacAppRunView: View {
         .background(Desk.page)
         .navigationTitle(app.name)
         .fullScreenCover(isPresented: $showScreen) { MacAppScreen(app: app) }
-        .confirmationDialog("Delete \(app.name)?", isPresented: $confirmDelete, titleVisibility: .visible) {
+        .confirmationDialog(L("Delete \(app.name)?"), isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Delete", role: .destructive) { store.delete(app); dismiss() }
         }
     }

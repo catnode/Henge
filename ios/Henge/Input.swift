@@ -236,7 +236,7 @@ struct ModifierRow: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(on ? Desk.accent : Desk.raised, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
         }
-        .accessibilityLabel(name)
+        .accessibilityLabel(L(name))
     }
 }
 

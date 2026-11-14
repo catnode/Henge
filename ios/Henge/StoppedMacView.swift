@@ -28,8 +28,8 @@ struct StoppedMacView: View {
     var body: some View {
         VStack(spacing: 14) {
             Image(systemName: "power").font(.system(size: 30))
-            Text(title).font(.headline)
-            Text(detail).font(.subheadline).foregroundStyle(.white.opacity(0.7))
+            Text(L(title)).font(.headline)
+            Text(L(detail)).font(.subheadline).foregroundStyle(.white.opacity(0.7))
                 .multilineTextAlignment(.center)
             if let start { Button("Start Mac", action: start).buttonStyle(.borderedProminent) }
             Button("Close", action: close).buttonStyle(.bordered)

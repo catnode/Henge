@@ -195,7 +195,7 @@ struct MouseButton: View {
     @State private var down = false
 
     var body: some View {
-        Text(title)
+        Text(L(title))
             .font(.system(size: 15))
             .foregroundStyle(down ? Desk.text : Desk.dim)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -215,6 +215,6 @@ struct MouseButton: View {
                         StickyKeys.shared.releaseAll()
                     }
             )
-            .accessibilityLabel(title)
+            .accessibilityLabel(L(title))
     }
 }

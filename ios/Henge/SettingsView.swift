@@ -38,11 +38,11 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section("JIT") {
-                    LabeledContent("Status", value: JITBootstrap.ready ? "On" : "Off")
+                    LabeledContent("Status", value: L(JITBootstrap.ready ? "On" : "Off"))
                     Picker("Method", selection: $jit.method) {
-                        ForEach(JITMethod.allCases) { Text($0.title).tag($0) }
+                        ForEach(JITMethod.allCases) { Text(L($0.title)).tag($0) }
                     }
-                    Text(jit.method == .automatic ? jit.automaticDescription : "Henge uses \(jit.method.title).")
+                    Text(L(jit.method == .automatic ? jit.automaticDescription : "Henge uses \(jit.method.title)."))
                         .font(.footnote).foregroundStyle(.secondary)
                     Button("Set up JIT") { jit.showSetup = true }
                     Toggle("Turn on JIT when Henge opens", isOn: $jitAtLaunch)
@@ -50,21 +50,21 @@ struct SettingsView: View {
                         Text("Henge connects LocalDevVPN first when it is off, and comes back.")
                             .font(.footnote).foregroundStyle(.secondary)
                     }
-                    LabeledContent("Code region", value: "\(JITBootstrap.jitBytes >> 20) MB, claimed once per launch")
+                    LabeledContent("Code region", value: L("\(JITBootstrap.jitBytes >> 20) MB, claimed once per launch"))
                 }
                 .listRowBackground(Desk.card)
                 Section("Memory") {
-                    LabeledContent("Extra memory", value: Entitlements.increasedMemory ? "On" : "Off")
+                    LabeledContent("Extra memory", value: L(Entitlements.increasedMemory ? "On" : "Off"))
                     LabeledContent("Henge's limit", value: ByteText.string(UInt64(Entitlements.memoryLimitAtLaunch)))
                     LabeledContent("Free for Henge", value: ByteText.string(UInt64(henge_available_memory())))
-                    Text(Entitlements.increasedMemory
+                    Text(L(Entitlements.increasedMemory
                          ? "A Mac's memory is kept out of this limit once JIT is on. If iOS refuses that, it uses free storage instead."
-                         : "This install isn't signed with the increased memory limit entitlement. Reinstall Henge with a certificate that has it. Export your Mac first if the reinstall replaces the app's data.")
+                         : "This install isn't signed with the increased memory limit entitlement. Reinstall Henge with a certificate that has it. Export your Mac first if the reinstall replaces the app's data."))
                         .font(.footnote).foregroundStyle(.secondary)
                 }
                 .listRowBackground(Desk.card)
                 if Device.isPad || Device.isFoldable {
-                    Section(Device.isPad ? "Mouse and Trackpad" : "Bluetooth Mouse") {
+                    Section(L(Device.isPad ? "Mouse and Trackpad" : "Bluetooth Mouse")) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Pointer speed")
                             Slider(value: $mouseSpeed, in: 0.5...3)
@@ -77,9 +77,9 @@ struct SettingsView: View {
                         Toggle("Swap physical right and middle buttons", isOn: $swapMouseButtons)
                         Text("Only enable this if your physical mouse's right and middle buttons are reversed in the Mac. Touch controls stay unchanged. Restart the Mac session to apply.")
                             .font(.footnote).foregroundStyle(.secondary)
-                        Text(Device.isPad
+                        Text(L(Device.isPad
                              ? "A Magic Keyboard or a Bluetooth mouse moves the Mac's pointer. Pointer speed changes apply the next time a Mac starts; scroll speed changes apply immediately."
-                             : "A Bluetooth keyboard types into the Mac and a Bluetooth mouse moves its pointer while a Mac is running. Pointer speed changes apply the next time a Mac starts; scroll speed changes apply immediately.")
+                             : "A Bluetooth keyboard types into the Mac and a Bluetooth mouse moves its pointer while a Mac is running. Pointer speed changes apply the next time a Mac starts; scroll speed changes apply immediately."))
                             .font(.footnote).foregroundStyle(.secondary)
                     }
                     .listRowBackground(Desk.card)
@@ -100,7 +100,7 @@ struct SettingsView: View {
                             .pickerStyle(.menu)
                             Toggle("Swap buttons", isOn: $swapButtons)
                         }
-                        Text("Henge is able to emulate a Magic Trackpad, allowing you to perform native macOS gestures using your device's touchscreen.\n\n\(inputDescription)")
+                        Text(L("Henge is able to emulate a Magic Trackpad, allowing you to perform native macOS gestures using your device's touchscreen.\n\n\(inputDescription)"))
                             .font(.footnote).foregroundStyle(.secondary)
                     }
                     .listRowBackground(Desk.card)
@@ -140,10 +140,10 @@ struct SettingsView: View {
                 .listRowBackground(Desk.card)
                 Section("Appearance") {
                     Picker("Appearance", selection: $appearance) {
-                        ForEach(DeskAppearance.allCases) { Text($0.title).tag($0) }
+                        ForEach(DeskAppearance.allCases) { Text(L($0.title)).tag($0) }
                     }
                     .pickerStyle(.segmented)
-                    Text("System follows the \(Device.name)'s Light or Dark setting. Henge stays dark while a Mac is running.")
+                    Text(L("System follows the \(Device.name)'s Light or Dark setting. Henge stays dark while a Mac is running."))
                         .font(.footnote).foregroundStyle(.secondary)
                 }
                 .listRowBackground(Desk.card)
