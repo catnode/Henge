@@ -25,8 +25,23 @@ enum Device {
         return HengeLog.deviceModel == "iPhone19,4" || min(size.width, size.height) >= foldWidth
     }
 
-    /// A Mac's screen for the half above the hinge: 16:10, which fills that half's width upright.
-    static let laptopScreen: (width: Int, height: Int) = (1920, 1200)
+    /// A Mac's screen for the half above the hinge: the shape of the room SessionView's layout leaves it
+    /// there (from the status bar down to the fold, the full width), so it fills that half edge to edge.
+    static var laptopScreen: (width: Int, height: Int) {
+        let size = UIScreen.main.bounds.size
+        let wide = min(size.width, size.height), tall = max(size.width, size.height)
+        let room = max(tall / 2 - 8 - foldTopInset - 6, 120)
+        let shape = max(wide - 16, 1) / room
+        return (1920, min(max(Int((1920 / shape / 8).rounded()) * 8, 900), 1440))
+    }
+
+    /// The safe area above the Mac when an unfolded phone is upright, as the session last saw it (the
+    /// screen's shape must not change with how the phone is turned while Settings is open).
+    static let foldTopInsetKey = "henge.fold.topInset"
+    static var foldTopInset: CGFloat {
+        let seen = UserDefaults.standard.double(forKey: foldTopInsetKey)
+        return seen > 0 ? CGFloat(seen) : 86
+    }
 
     /// Preserve the iPad's shape while reducing the virtual GPU's pixel work.
     static var performanceScreen: (width: Int, height: Int) {

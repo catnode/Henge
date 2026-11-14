@@ -287,6 +287,9 @@ struct SessionView: View {
                 // fold and, half folded, it sits like a laptop: screen on the lid, keys and trackpad on the deck.
                 let fold = full.height / 2
                 let top = insets.top + 6
+                if abs(Device.foldTopInset - insets.top) >= 1, insets.top > 0 {
+                    UserDefaults.standard.set(Double(insets.top), forKey: Device.foldTopInsetKey)
+                }
                 let room = max(fold - 8 - top, 120)
                 let width = min(full.width - 16, room * aspect)
                 let height = width / aspect
