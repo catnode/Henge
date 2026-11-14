@@ -481,7 +481,8 @@ struct SessionView: View {
     }
 
     private var screenNow: (width: Int, height: Int) {
-        liveScreen.map { (Int($0.width), Int($0.height)) } ?? mac.screen
+        if let live = liveScreen { return (width: Int(live.width), height: Int(live.height)) }
+        return mac.screen
     }
     private var aspectNow: CGFloat { CGFloat(screenNow.width) / CGFloat(max(screenNow.height, 1)) }
 
