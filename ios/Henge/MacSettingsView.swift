@@ -57,11 +57,11 @@ struct MacSettingsView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Picker("Screen", selection: Binding(get: {
                             if mac.isRetina { return "retina" }
-                            if mac.screen.width == Device.performanceScreen.width,
-                               mac.screen.height == Device.performanceScreen.height { return "performance" }
-                            if mac.screen.width == 1920, mac.screen.height == 1080 { return "wide" }
-                            if Device.isFoldable, mac.screen.width == Device.laptopScreen.width,
-                               mac.screen.height == Device.laptopScreen.height { return "laptop" }
+                            if mac.chosenScreen.width == Device.performanceScreen.width,
+                               mac.chosenScreen.height == Device.performanceScreen.height { return "performance" }
+                            if mac.chosenScreen.width == 1920, mac.chosenScreen.height == 1080 { return "wide" }
+                            if Device.isFoldable, mac.chosenScreen.width == Device.laptopScreen.width,
+                               mac.chosenScreen.height == Device.laptopScreen.height { return "laptop" }
                             return "fit"
                         }, set: { choice in
                             mac.retina = choice == "retina"

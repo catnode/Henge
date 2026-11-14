@@ -19,7 +19,9 @@ struct VirtualMac: Identifiable, Codable, Hashable {
     /// m4 fork: the iPad's own panel at Retina density. On by default on iPad, for Macs that never chose.
     var retina: Bool?
     var isRetina: Bool { Device.isPad && (retina ?? false) }
-    var screen: (width: Int, height: Int) { isRetina ? Device.retinaScreen : (screenWidth ?? 1920, screenHeight ?? 1080) }
+    /// The screen chosen for this Mac, before the size of what it shows is applied.
+    var chosenScreen: (width: Int, height: Int) { isRetina ? Device.retinaScreen : (screenWidth ?? 1920, screenHeight ?? 1080) }
+    var screen: (width: Int, height: Int) { isRetina ? chosenScreen : Device.zoomed(chosenScreen) }
     var aspect: CGFloat { CGFloat(screen.width) / CGFloat(screen.height) }
 
     var directory: URL { Machines.directory(for: id) }

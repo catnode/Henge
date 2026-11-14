@@ -490,7 +490,7 @@ struct SessionView: View {
     /// phone on its side or the half above the hinge upright. macOS is told its display changed, as for a resized window.
     private func fitScreen(sideways: Bool) {
         guard screenFollows, Device.isFoldable, !mac.isRetina, !display.isExternal else { return }
-        let want = sideways ? Device.fittingScreen : Device.laptopScreen
+        let want = Device.zoomed(sideways ? Device.fittingScreen : Device.laptopScreen)
         guard want.width != screenNow.width || want.height != screenNow.height else { return }
         HengeLog.log("session", "screen \(screenNow.width)x\(screenNow.height) -> \(want.width)x\(want.height): the phone is \(sideways ? "on its side" : "upright")")
         henge_vm_resize_display(UInt32(want.width), UInt32(want.height))

@@ -36,6 +36,23 @@ enum Device {
         return (1920, min(max(Int((1920 / shape / 8).rounded()) * 8, 900), 1440))
     }
 
+    /// How large the Mac draws everything, in percent: an unfolded phone is far smaller than the monitor
+    /// 1920 pixels across are meant for. The Mac gets that many fewer pixels in the same shape, and the
+    /// phone shows each larger. Only phones that unfold have the choice.
+    static let zoomKey = "henge.display.zoom"
+    static let zooms = [100, 125, 150, 175]
+    static var zoom: Int {
+        guard isFoldable else { return 100 }
+        let chosen = UserDefaults.standard.integer(forKey: zoomKey)
+        return zooms.contains(chosen) ? chosen : 125
+    }
+    static func zoomed(_ screen: (width: Int, height: Int)) -> (width: Int, height: Int) {
+        let percent = zoom
+        guard percent != 100 else { return screen }
+        func fewer(_ pixels: Int) -> Int { Int((Double(pixels) * 100 / Double(percent) / 8).rounded()) * 8 }
+        return (fewer(screen.width), fewer(screen.height))
+    }
+
     /// The safe area above the Mac when an unfolded phone is upright, as the session last saw it (the
     /// screen's shape must not change with how the phone is turned while Settings is open).
     /// Whether a running Mac's screen changes shape with how an unfolding phone is held (experimental).

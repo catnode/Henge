@@ -12,6 +12,7 @@ struct SettingsView: View {
     @AppStorage(PhysicalMouseButtons.swapKey) private var swapMouseButtons = false
     @AppStorage(HardwareMouse.followKey) private var followPointer = !Device.isPad
     @AppStorage(Device.followPostureKey) private var screenFollows = false
+    @AppStorage(Device.zoomKey) private var screenZoom = 125
     @AppStorage(EngineTuning.refreshKey) private var refreshRate = 60
     @AppStorage(EngineTuning.fastFlushKey) private var fastFlush = true
     @AppStorage(EngineTuning.wfiSpinKey) private var wfiSpin = false
@@ -135,6 +136,14 @@ struct SettingsView: View {
                 .listRowBackground(Desk.card)
                 if Device.isFoldable {
                     Section("Screen") {
+                        Picker("Size of what the Mac shows", selection: $screenZoom) {
+                            Text("Standard").tag(100)
+                            Text("Larger").tag(125)
+                            Text("Large").tag(150)
+                            Text("Largest").tag(175)
+                        }
+                        Text("Larger makes the Mac's text, menus and windows bigger on the phone, with less room on its desktop. It applies the next time a Mac starts.")
+                            .font(.footnote).foregroundStyle(.secondary)
                         Toggle("Screen follows how the phone is held", isOn: $screenFollows)
                         Text("A running Mac's screen changes shape when you turn the phone: it fills the whole phone on its side, and the half above the hinge when upright. Windows may rearrange each time. If the Mac's picture freezes or goes black, turn this off and restart the Mac. Experimental.")
                             .font(.footnote).foregroundStyle(.secondary)
