@@ -13,6 +13,7 @@ struct SettingsView: View {
     @AppStorage(HardwareMouse.followKey) private var followPointer = !Device.isPad
     @AppStorage(Device.followPostureKey) private var screenFollows = false
     @AppStorage(Device.zoomKey) private var screenZoom = 125
+    @AppStorage(MacKeyboard.compactKey) private var compactKeys = true
     @AppStorage(EngineTuning.refreshKey) private var refreshRate = 60
     @AppStorage(EngineTuning.fastFlushKey) private var fastFlush = true
     @AppStorage(EngineTuning.wfiSpinKey) private var wfiSpin = false
@@ -135,6 +136,16 @@ struct SettingsView: View {
                 }
                 .listRowBackground(Desk.card)
                 if Device.isFoldable {
+                    Section("Keyboard on the lower half") {
+                        Picker("Layout", selection: $compactKeys) {
+                            Text("Fits the phone").tag(true)
+                            Text("MacBook").tag(false)
+                        }
+                        .pickerStyle(.segmented)
+                        Text("Fits the phone has five rows of larger keys that fill the room, with esc beside the digits. MacBook has a MacBook's six rows and key shapes, with the function keys.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                    .listRowBackground(Desk.card)
                     Section("Screen") {
                         Picker("Size of what the Mac shows", selection: $screenZoom) {
                             Text("Standard").tag(100)

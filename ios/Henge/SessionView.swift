@@ -37,6 +37,7 @@ struct SessionView: View {
     @State private var controlsHidden = false
     @State private var showRevealHint = false
     @State private var fullScreen = false // nothing over the Mac at all: no controls, no status bar
+    @AppStorage(MacKeyboard.compactKey) private var compactKeys = true
     @AppStorage(Device.followPostureKey) private var screenFollows = false
     @State private var liveScreen: CGSize? // the Mac's screen, once it was changed while running
     @State private var sideways = false
@@ -395,7 +396,8 @@ struct SessionView: View {
             .transition(.opacity)
         }
         if !layout.keys.isEmpty {
-            MacKeyboard(macBook: layout.flush)
+            MacKeyboard(macBook: layout.flush, compact: compactKeys)
+                .id(compactKeys)
                 .frame(width: layout.keys.width, height: layout.keys.height)
                 .position(x: layout.keys.midX, y: layout.keys.midY)
         }

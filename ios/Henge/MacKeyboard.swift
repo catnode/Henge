@@ -12,8 +12,14 @@ import GameController
 struct MacKeyboard: UIViewRepresentable {
     /// A MacBook's look: black keys with white legends, for the aluminium deck under them.
     var macBook = false
+    /// The rows made for the phone instead of a MacBook's: five of them, each as wide and as tall as its
+    /// share of the room, with esc beside the digits. Chosen in Settings.
+    var compact = MacKeyboard.isCompact
 
-    func makeUIView(context: Context) -> KeyboardPad { KeyboardPad(macBook: macBook) }
+    static let compactKey = "henge.keyboard.compact"
+    static var isCompact: Bool { UserDefaults.standard.object(forKey: compactKey) as? Bool ?? true }
+
+    func makeUIView(context: Context) -> KeyboardPad { KeyboardPad(macBook: macBook, compact: compact) }
 
     func updateUIView(_ pad: KeyboardPad, context: Context) { pad.macBook = macBook }
 
@@ -84,6 +90,22 @@ private struct KeySpec {
          arrow("◀", 105, fn: 102, .bottom, said: "left"),
          arrow("▲", 103, fn: 104, .top, said: "up"), arrow("▼", 108, fn: 109, .bottom, said: "down"),
          arrow("▶", 106, fn: 107, .bottom, said: "right")],
+    ]
+    /// The phone's own rows: no function row, esc beside the digits, whole arrow keys. Every row is
+    /// spread over the full width, so the keys are as large as the room allows.
+    static let compactRows: [[KeySpec]] = [
+        [KeySpec(legend: "esc", code: 1)] + rows[1],
+        rows[2],
+        rows[3],
+        [held("shift", "", 42, 2, .left)] + Array(rows[4][1...10])
+            + [function("▲", 103, fn: 104, said: "up"), held("shift", "", 54, 1.5, .right)],
+        [KeySpec(name: "fn", side: .left, kind: .fn),
+         held("control", "⌃", 29, 1.15, .right), held("option", "⌥", 56, 1.15, .right),
+         held("command", "⌘", 125, 1.4, .right),
+         KeySpec(code: 57, weight: 4.6, said: "space"),
+         held("command", "⌘", 126, 1.25, .left), held("option", "⌥", 100, 1, .left),
+         function("◀", 105, fn: 102, said: "left"), function("▼", 108, fn: 109, said: "down"),
+         function("▶", 106, fn: 107, said: "right")],
     ]
     static let functionRow: CGFloat = 0.55   // its height, in rows
     static let across: CGFloat = 14.5        // a row, in keys
@@ -199,9 +221,12 @@ final class KeyboardPad: UIView {
     /// A modifier let go within this long, and with no other key pressed meanwhile, stays down for the next key.
     private static let tap: TimeInterval = 0.4
 
-    init(macBook: Bool) {
+    private let compact: Bool
+
+    init(macBook: Bool, compact: Bool) {
         self.macBook = macBook
-        rows = KeySpec.rows.map { $0.map(KeyCap.init) }
+        self.compact = compact
+        rows = (compact ? KeySpec.compactRows : KeySpec.rows).map { $0.map(KeyCap.init) }
         caps = rows.flatMap { $0 }
         super.init(frame: .zero)
         isMultipleTouchEnabled = true
@@ -219,13 +244,16 @@ final class KeyboardPad: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        let high = CGFloat(rows.count - 1) + KeySpec.functionRow
-        let pitch = bounds.width / KeySpec.across
-        let rowPitch = min(bounds.height / high, pitch)     // never taller than a key is wide
-        let gap = max(pitch * 0.1, 3)
+        let high = compact ? CGFloat(rows.count) : CGFloat(rows.count - 1) + KeySpec.functionRow
+        let across = bounds.width / KeySpec.across
+        // A MacBook's keys are never taller than they are wide; the phone's own rows take all the room.
+        let rowPitch = compact ? bounds.height / high : min(bounds.height / high, across)
+        let gap = compact ? max(min(across * 0.07, 4), 2.5) : max(across * 0.1, 3)
         var y = ((bounds.height - rowPitch * high) / 2).rounded()
         for (index, row) in rows.enumerated() {
-            let height = index == 0 ? rowPitch * KeySpec.functionRow : rowPitch
+            let height = index == 0 && !compact ? rowPitch * KeySpec.functionRow : rowPitch
+            let weights = row.reduce(CGFloat(0)) { $0 + ($1.spec.slot == .top ? 0 : $1.spec.weight) }
+            let pitch = compact ? bounds.width / max(weights, 1) : across
             var x: CGFloat = 0
             for cap in row {
                 let width = cap.spec.weight * pitch

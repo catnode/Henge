@@ -214,6 +214,10 @@
 "Bluetooth Mouse" = "蓝牙鼠标";
 "Pointer speed" = "指针速度";
 "Reverse scrolling" = "反向滚动";
+"Keyboard on the lower half" = "下半屏键盘";
+"Layout" = "布局";
+"Fits the phone" = "适配手机";
+"Fits the phone has five rows of larger keys that fill the room, with esc beside the digits. MacBook has a MacBook's six rows and key shapes, with the function keys." = "“适配手机”是五排更大的按键，铺满可用空间，esc 在数字键旁边。“MacBook”是和 MacBook 一样的六排键位和键形，带功能键。";
 "Size of what the Mac shows" = "Mac 画面内容的大小";
 "Standard" = "标准";
 "Larger" = "较大";
