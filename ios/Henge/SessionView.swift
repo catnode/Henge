@@ -61,6 +61,8 @@ struct SessionView: View {
             let landscape = full.width > full.height
             let layout = Layout(full: full, insets: insets, landscape: landscape, zoomed: zoomed, typing: typing, centre: zoomCentre, aspect: mac.aspect,
                                 drawsKeyboard: !attachedKeyboard.present)
+            // A mouse's pointer on a phone: the Mac's pointer goes where it is over this rectangle.
+            let _ = HardwareMouse.shared.screen = display.isExternal ? .null : layout.screen
             ZStack(alignment: .topLeading) {
                 (landscape || zoomed ? Color.black : Desk.page)
                 // One view in every layout: it holds the layer the engine draws into.

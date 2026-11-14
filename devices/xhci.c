@@ -126,6 +126,38 @@ static const uint8_t tp_config_desc[34] = {
 
 static const char *const tp_strings[] = {NULL, "Apple Inc.", "Magic Trackpad 2", "HengeVM"};
 
+/* Port 3: a pointer with absolute coordinates, the descriptor QEMU's "usb-tablet" has, which macOS's
+   own HID driver takes as a pointing device that names its place on the screen. */
+
+static const uint8_t ab_report_desc[] = {
+    0x05, 0x01, 0x09, 0x02, 0xa1, 0x01,       /* usage page (generic desktop), usage (mouse), collection (application) */
+    0x09, 0x01, 0xa1, 0x00,                  /* usage (pointer), collection (physical) */
+    0x05, 0x09, 0x19, 0x01, 0x29, 0x03, 0x15, 0x00, 0x25, 0x01, /* buttons 1-3 */
+    0x95, 0x03, 0x75, 0x01, 0x81, 0x02,
+    0x95, 0x01, 0x75, 0x05, 0x81, 0x01,
+    0x05, 0x01, 0x09, 0x30, 0x09, 0x31,       /* X, Y */
+    0x15, 0x00, 0x26, 0xff, 0x7f, 0x35, 0x00, 0x46, 0xff, 0x7f, /* 0..32767 */
+    0x75, 0x10, 0x95, 0x02, 0x81, 0x02,       /* 16 bits each, absolute */
+    0x05, 0x01, 0x09, 0x38, 0x15, 0x81, 0x25, 0x7f, 0x35, 0x00, 0x45, 0x00, /* wheel, -127..127 */
+    0x75, 0x08, 0x95, 0x01, 0x81, 0x06,
+    0xc0, 0xc0,
+};
+
+static const uint8_t ab_device_desc[18] = {
+    18, 1, 0x00, 0x02, 0, 0, 0, 64, /* USB 2.0, class per interface, EP0 64 bytes */
+    0x27, 0x06, 0x01, 0x00,         /* vendor 0x0627, product 0x0001: QEMU's tablet */
+    0x00, 0x01, 1, 2, 3, 1,         /* bcdDevice 1.00, strings 1-3, one configuration */
+};
+
+static const uint8_t ab_config_desc[34] = {
+    9, 2, 34, 0, 1, 1, 0, 0xa0, 50,           /* one interface, remote wakeup, 100 mA */
+    9, 4, 0, 0, 1, 3, 0, 0, 0,                /* interface 0: HID, no boot protocol */
+    9, 0x21, 0x11, 0x01, 0, 1, 0x22, sizeof ab_report_desc, 0, /* HID 1.11, one report descriptor */
+    7, 5, 0x81, 3, 8, 0, 4,                   /* EP1 IN, interrupt, 8 bytes, every millisecond */
+};
+
+static const char *const ab_strings[] = {NULL, "HengeVM", "HengeVM USB Tablet", "1"};
+
 struct HvXhciDev {
     const char *const *strings;
     const uint8_t *device_desc;
@@ -136,6 +168,7 @@ struct HvXhciDev {
 static const struct HvXhciDev devs[HV_XHCI_DEVICES] = {
     {kbd_strings, kbd_device_desc, kbd_config_desc, kbd_report_desc, sizeof kbd_report_desc},
     {tp_strings, tp_device_desc, tp_config_desc, tp_report_desc, sizeof tp_report_desc},
+    {ab_strings, ab_device_desc, ab_config_desc, ab_report_desc, sizeof ab_report_desc},
 };
 
 static int xlog(void) {
@@ -373,7 +406,12 @@ static int control(HvXhci *x, int slot, const uint8_t setup[8], uint8_t *out, in
         src = tmp, len = 1;
     } else if (type == 0xa1 && req == 1) { /* GET_REPORT: wValue is (type << 8) | report ID */
         if (x->slots[slot].dev == 0) src = x->state, len = 8;
-        else {
+        else if (x->slots[slot].dev == 2) {
+            pthread_mutex_lock(&x->mu);
+            memcpy(tmp, x->ab_state, HV_AB_REPORT_LEN);
+            pthread_mutex_unlock(&x->mu);
+            src = tmp, len = HV_AB_REPORT_LEN;
+        } else {
             int rtype = value >> 8, rid = value & 0xff;
             if (rtype == 3) { /* feature: the sensor-configuration registers */
                 if (rid == 0x01) { /* the header for the register just selected */
@@ -505,6 +543,20 @@ static void run_ep_in(HvXhci *x, int slot) {
             wr(x, buf, x->reports[x->rhead % HV_XHCI_REPORTS], n);
             x->rhead++;
             x->delivered++;
+            transfer_event(x, at, n < want ? CC_SHORT_PACKET : CC_SUCCESS, want - n, slot, dci);
+        }
+    } else if (s->dev == 2) {
+        while (x->ab_rhead != x->ab_rtail && ring_peek(x, r, trb, &at)) {
+            int type = (trb[3] >> 10) & 0x3f;
+            ring_advance(r);
+            if (type != TRB_NORMAL) continue;
+            uint64_t buf = (uint64_t)trb[1] << 32 | trb[0];
+            uint32_t want = trb[2] & 0x1ffff;
+            uint32_t n = want < HV_AB_REPORT_LEN ? want : HV_AB_REPORT_LEN;
+            wr(x, buf, x->ab_reports[x->ab_rhead % HV_AB_REPORTS], n);
+            x->ab_rhead++;
+            x->ab_delivered++;
+            if (x->ab_delivered == 1) fprintf(stderr, "hengevm: xhci: absolute pointer: the guest took its first report\n");
             transfer_event(x, at, n < want ? CC_SHORT_PACKET : CC_SUCCESS, want - n, slot, dci);
         }
     } else {
@@ -760,6 +812,9 @@ static void reset(HvXhci *x) {
     x->tp_db = 0;
     x->tp_multi_logs = 0;
     x->tp_f1_len = 0;
+    x->ab_rhead = x->ab_rtail = 0;
+    memset(x->ab_state, 0, sizeof x->ab_state);
+    x->ab_delivered = 0;
     for (int p = 0; p < HV_XHCI_PORTS; p++)
         x->portsc[p] = PORT_PP | PORT_CCS | PORT_CSC | (uint32_t)(p ? SPEED_HIGH : SPEED_FULL) << PORT_SPEED_SHIFT | 7u << PORT_PLS_SHIFT;
     update_irq(x);
@@ -789,7 +844,7 @@ static uint64_t bar_read(HvPciDev *d, int bar, uint64_t off, unsigned size) {
         if (size == 8 && i + 1 < 8) v |= (uint64_t)cap[i + 1] << 32;
         v >>= 8 * (off & 3);
     } else if (off >= XECP && off < XECP + 16) { /* Supported Protocol: USB 2.0 on every port */
-        static const uint32_t ext[4] = {2u | 0x0200u << 16, 0x20425355, 1u | ((1u << HV_XHCI_PORTS) - 1u) << 8, 0};
+        static const uint32_t ext[4] = {2u | 0x0200u << 16, 0x20425355, 1u | (uint32_t)HV_XHCI_PORTS << 8, 0}; /* ports 1..N */
         uint32_t i = (uint32_t)(off - XECP) / 4;
         v = ext[i];
         if (size == 8 && i + 1 < 4) v |= (uint64_t)ext[i + 1] << 32;
@@ -1108,6 +1163,22 @@ void hv_xhci_touch_button(HvXhci *x, int down) {
         x->tp_button = down & 1;
         tp_queue(x, 0);
     }
+    pthread_mutex_unlock(&x->mu);
+    hv_machine_wake(x->m);
+}
+
+/* ---- the absolute pointer's reports ---- */
+
+void hv_xhci_pointer(HvXhci *x, int px, int py) {
+    if (!x) return;
+    px = px < 0 ? 0 : px > HV_AB_RANGE ? HV_AB_RANGE : px;
+    py = py < 0 ? 0 : py > HV_AB_RANGE ? HV_AB_RANGE : py;
+    pthread_mutex_lock(&x->mu);
+    uint8_t *s = x->ab_state;
+    s[1] = (uint8_t)px, s[2] = (uint8_t)(px >> 8), s[3] = (uint8_t)py, s[4] = (uint8_t)(py >> 8);
+    /* Only the latest place matters: one the guest hasn't taken yet is replaced, so the pointer never lags. */
+    if (x->ab_rtail != x->ab_rhead) memcpy(x->ab_reports[(x->ab_rtail - 1) % HV_AB_REPORTS], s, HV_AB_REPORT_LEN);
+    else memcpy(x->ab_reports[x->ab_rtail++ % HV_AB_REPORTS], s, HV_AB_REPORT_LEN);
     pthread_mutex_unlock(&x->mu);
     hv_machine_wake(x->m);
 }

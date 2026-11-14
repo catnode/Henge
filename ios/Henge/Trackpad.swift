@@ -51,7 +51,11 @@ struct Trackpad: UIViewRepresentable {
         }
 
         /// Over the Mac there is only the Mac's pointer, if iPadOS hasn't locked its own away.
-        func pointerInteraction(_ interaction: UIPointerInteraction, styleFor region: UIPointerRegion) -> UIPointerStyle? { .hidden() }
+        /// On a phone whose pointer the Mac's follows, a pad away from the Mac's picture keeps the system's pointer.
+        func pointerInteraction(_ interaction: UIPointerInteraction, styleFor region: UIPointerRegion) -> UIPointerStyle? {
+            let centre = convert(CGPoint(x: bounds.midX, y: bounds.midY), to: nil)
+            return HardwareMouse.shared.showsSystemPointer(at: centre) ? nil : .hidden()
+        }
 
         required init?(coder: NSCoder) { fatalError("made in code") }
 

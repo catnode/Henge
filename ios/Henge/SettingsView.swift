@@ -10,6 +10,7 @@ struct SettingsView: View {
     @AppStorage(VolumeClicks.modeKey) private var volumeMode = VolumeClicks.Mode.delayHold
     @AppStorage(VolumeClicks.swapKey) private var swapButtons = false
     @AppStorage(PhysicalMouseButtons.swapKey) private var swapMouseButtons = false
+    @AppStorage(HardwareMouse.followKey) private var followPointer = !Device.isPad
     @AppStorage(EngineTuning.refreshKey) private var refreshRate = 60
     @AppStorage(EngineTuning.fastFlushKey) private var fastFlush = true
     @AppStorage(EngineTuning.wfiSpinKey) private var wfiSpin = false
@@ -73,6 +74,11 @@ struct SettingsView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Scroll speed")
                             Slider(value: $scrollSpeed, in: 0.1...1.5)
+                        }
+                        if !Device.isPad {
+                            Toggle("Mac pointer follows the iPhone's pointer", isOn: $followPointer)
+                            Text("The Mac's pointer goes to where the iPhone's own pointer is over the Mac's screen, so there is only one. Turn this off if the pointer jumps or stops. Restart the Mac session to apply.")
+                                .font(.footnote).foregroundStyle(.secondary)
                         }
                         Toggle("Swap physical right and middle buttons", isOn: $swapMouseButtons)
                         Text("Only enable this if your physical mouse's right and middle buttons are reversed in the Mac. Touch controls stay unchanged. Restart the Mac session to apply.")

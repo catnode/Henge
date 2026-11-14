@@ -180,6 +180,11 @@ final class HardwareMouse {
     static let speedKey = "henge.mouse.speed"
     static let reverseKey = "henge.mouse.reverse"
     static let scrollSpeedKey = "henge.mouse.scrollSpeed"
+    static let followKey = "henge.mouse.followPointer"
+
+    /// Where the Mac's picture is in the window, in points: the session's layout keeps it current.
+    /// Null while the Mac is on another display.
+    var screen = CGRect.null
 
     private var observers: [NSObjectProtocol] = []
     private var mice: [GCMouse] = []
@@ -193,6 +198,15 @@ final class HardwareMouse {
     private var lastRawMove = Date.distantPast
     private var movesLogged = 0
     private let pointerDrag = PointerDrag()
+    /// A phone keeps its own pointer on screen (it never locks it), so the Mac's pointer goes where that
+    /// one is, through the Mac's absolute pointing device, instead of both wandering apart.
+    private var follow = false
+    private var pointerAt: CGPoint? // the system pointer, in the window; nil until iOS says where it is
+    private var lastPlace = Date.distantPast
+    private var unplaced = 0 // raw moves in a row that came with no word of where the pointer is
+    private var placesLogged = 0
+    private var swallowed: Set<Int32> = [] // buttons pressed with the pointer off the Mac's screen
+    private var forwarded: Set<Int32> = []
 
     func start() {
         let defaults = UserDefaults.standard
@@ -222,7 +236,15 @@ final class HardwareMouse {
         })
         PointerLock.set(true)
         movesLogged = 0
+        follow = defaults.object(forKey: Self.followKey) == nil ? !Device.isPad : defaults.bool(forKey: Self.followKey)
+        pointerAt = nil
+        unplaced = 0
+        placesLogged = 0
+        swallowed.removeAll()
+        forwarded.removeAll()
+        HengeLog.log("input", "physical mouse: the Mac's pointer follows the system's \(follow ? "on" : "off")")
         pointerDrag.moved = { [weak self] dx, dy in self?.dragged(dx, dy) }
+        pointerDrag.placed = { [weak self] p in self?.placed(p) }
         pointerDrag.install()
     }
 
@@ -245,16 +267,60 @@ final class HardwareMouse {
 
     func releaseButtons() {
         for button in buttons.releaseAll() { henge_vm_mouse_button(button, 0) }
+        swallowed.removeAll()
+        forwarded.removeAll()
+    }
+
+    /// Whether the system's pointer should stay visible over a view centred at this point of the window:
+    /// it should wherever the Mac's pointer does not stand in for it.
+    func showsSystemPointer(at point: CGPoint) -> Bool {
+        follow && !screen.isNull && !screen.contains(point)
+    }
+
+    private var overScreen: Bool {
+        guard let p = pointerAt, !screen.isNull else { return false }
+        return screen.insetBy(dx: -1, dy: -1).contains(p)
+    }
+
+    /// iOS said where its pointer is. Over the Mac's picture, the Mac's pointer goes to the same spot;
+    /// with a button held there, it stays at the picture's nearest edge when the system's pointer leaves.
+    private func placed(_ p: CGPoint) {
+        guard follow else { return }
+        if pointerAt == nil { HengeLog.log("input", "physical mouse: iOS reports its pointer's place; the Mac's pointer follows it") }
+        pointerAt = p
+        lastPlace = Date()
+        unplaced = 0
+        guard !screen.isNull, screen.width > 1, screen.height > 1, overScreen || !forwarded.isEmpty else { return }
+        let x = min(max((p.x - screen.minX) / screen.width, 0), 1), y = min(max((p.y - screen.minY) / screen.height, 0), 1)
+        if placesLogged < 6 {
+            placesLogged += 1
+            HengeLog.log("input", "physical mouse: pointer at \(p) in the window, \(x), \(y) of the Mac's screen \(screen)")
+        }
+        henge_vm_mouse_at(Int32((x * 32767).rounded()), Int32((y * 32767).rounded()))
+    }
+
+    /// Raw motion. While the Mac's pointer follows the system's, it only counts when iOS has stopped
+    /// saying where its pointer is (it can during a held button), so the Mac's pointer never stalls.
+    private func rawMoved(_ dx: Float, _ dy: Float) {
+        let now = Date(), continuing = now.timeIntervalSince(lastRawMove) < 0.1
+        lastRawMove = now
+        if follow, pointerAt != nil {
+            guard continuing, now.timeIntervalSince(lastPlace) > 0.15 else { return }
+            unplaced += 1
+            if unplaced > 40 {
+                HengeLog.log("input", "physical mouse: iOS stopped reporting its pointer's place; back to raw motion")
+                pointerAt = nil
+            }
+            guard overScreen || !forwarded.isEmpty || pointerAt == nil else { return }
+        }
+        moved(dx, dy)
     }
 
     private func attach(_ mouse: GCMouse) {
         guard let input = mouse.mouseInput, !mice.contains(where: { $0 === mouse }) else { return }
         mice.append(mouse)
         HengeLog.log("input", "mouse: \(mouse.vendorName ?? "?"), right button \(input.rightButton != nil), middle \(input.middleButton != nil)")
-        input.mouseMovedHandler = { [weak self] _, dx, dy in
-            self?.lastRawMove = Date()
-            self?.moved(dx, dy)
-        }
+        input.mouseMovedHandler = { [weak self] _, dx, dy in self?.rawMoved(dx, dy) }
         input.leftButton.pressedChangedHandler = { [weak self] _, _, pressed in self?.button(0, pressed) }
         input.rightButton?.pressedChangedHandler = { [weak self] _, _, pressed in self?.button(1, pressed) }
         input.middleButton?.pressedChangedHandler = { [weak self] _, _, pressed in self?.button(2, pressed) }
@@ -276,7 +342,7 @@ final class HardwareMouse {
     /// as a drag of its own pointer, and GameController then reports none: a held icon would not move.
     /// The drag's own travel stands in, only while GameController is silent. In points, so about doubled.
     private func dragged(_ dx: CGFloat, _ dy: CGFloat) {
-        guard Date().timeIntervalSince(lastRawMove) > 0.15 else { return }
+        guard !(follow && pointerAt != nil), Date().timeIntervalSince(lastRawMove) > 0.15 else { return }
         if movesLogged < 8 {
             movesLogged += 1
             HengeLog.log("input", "physical mouse: held motion taken from the pointer's drag (\(dx), \(dy))")
@@ -285,6 +351,17 @@ final class HardwareMouse {
     }
 
     private func button(_ physicalButton: Int32, _ pressed: Bool) {
+        // The system's pointer is over something of the app's own (the drawn keyboard, a control): the click is for that.
+        if pressed, follow, pointerAt != nil, !screen.isNull, !overScreen {
+            swallowed.insert(physicalButton)
+            if buttonsLogged < 32 {
+                buttonsLogged += 1
+                HengeLog.log("input", "physical mouse button: raw=\(physicalButton) down off the Mac's screen, kept from the Mac")
+            }
+            return
+        }
+        if !pressed, swallowed.remove(physicalButton) != nil { return }
+        if pressed { forwarded.insert(physicalButton) } else { forwarded.remove(physicalButton) }
         guard let guestButton = buttons.event(physicalButton, pressed: pressed) else { return }
         if buttonsLogged < 32 {
             buttonsLogged += 1
@@ -334,7 +411,9 @@ final class HardwareMouse {
 /// without taking it from the views under it.
 final class PointerDrag: NSObject, UIGestureRecognizerDelegate {
     var moved: ((CGFloat, CGFloat) -> Void)?
-    private var recognizers: [UIPanGestureRecognizer] = []
+    /// Where the pointer is, in the window, whether or not a button is held.
+    var placed: ((CGPoint) -> Void)?
+    private var recognizers: [UIGestureRecognizer] = []
 
     func install() {
         remove()
@@ -348,16 +427,28 @@ final class PointerDrag: NSObject, UIGestureRecognizerDelegate {
             pan.delegate = self
             window.addGestureRecognizer(pan)
             recognizers.append(pan)
+            let hover = UIHoverGestureRecognizer(target: self, action: #selector(hovered(_:)))
+            hover.cancelsTouchesInView = false
+            hover.delegate = self
+            window.addGestureRecognizer(hover)
+            recognizers.append(hover)
         }
     }
 
     func remove() {
-        for pan in recognizers { pan.view?.removeGestureRecognizer(pan) }
+        for recognizer in recognizers { recognizer.view?.removeGestureRecognizer(recognizer) }
         recognizers.removeAll()
     }
 
+    @objc private func hovered(_ hover: UIHoverGestureRecognizer) {
+        guard hover.state == .began || hover.state == .changed, let view = hover.view else { return }
+        placed?(hover.location(in: view))
+    }
+
     @objc private func panned(_ pan: UIPanGestureRecognizer) {
-        guard pan.state == .changed, let view = pan.view else { return }
+        guard let view = pan.view else { return }
+        if pan.state == .began || pan.state == .changed { placed?(pan.location(in: view)) }
+        guard pan.state == .changed else { return }
         let travel = pan.translation(in: view)
         pan.setTranslation(.zero, in: view)
         if travel != .zero { moved?(travel.x, travel.y) }

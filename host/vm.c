@@ -678,6 +678,18 @@ void hv_vm_mouse_move(int dx, int dy) {
     dispatch_async_f(pointer_queue(), (void *)(intptr_t)packed, move_now);
 }
 
+static void at_now(void *ctx) {
+    if (atomic_load(&input_stopping)) return;
+    intptr_t v = (intptr_t)ctx;
+    hv_xhci_pointer(board.usb, (int)(v >> 16) & 0x7fff, (int)v & 0x7fff);
+}
+
+void hv_vm_mouse_at(int x, int y) {
+    x = x < 0 ? 0 : x > 32767 ? 32767 : x;
+    y = y < 0 ? 0 : y > 32767 ? 32767 : y;
+    dispatch_async_f(pointer_queue(), (void *)(intptr_t)(x << 16 | y), at_now);
+}
+
 static void left_update(void) {
     int down = left_user || left_click;
     if (down == left_sent) return;
