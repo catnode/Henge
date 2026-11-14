@@ -194,7 +194,8 @@ $(B)/tl-samples.dmg: tests/tl/exit3.c tl/tests/hello.c tl/tests/fnd.m tl/tests/s
 	cp tl/build/swifty "$(B)/tl-samples/Swift sample"
 	cp tl/build/cxx "$(B)/tl-samples/C++ sample"
 	ditto tl/build/FW.app "$(B)/tl-samples/Framework sample.app"
-	hdiutil create -quiet -srcfolder $(B)/tl-samples -volname "Henge Samples" -fs HFS+ -format UDZO $@
+	# hdiutil now and then fails with "Resource busy" on a build machine; try again
+	for i in 1 2 3 4; do hdiutil create -quiet -srcfolder $(B)/tl-samples -volname "Henge Samples" -fs HFS+ -format UDZO $@ && break; rm -f $@; sleep 3; done; test -f $@
 	xattr -c $@ # codesign refuses an app holding a file with Finder information
 
 $(B)/tl-exit3: tests/tl/exit3.c | $(B)
