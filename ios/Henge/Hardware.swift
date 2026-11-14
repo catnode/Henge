@@ -190,6 +190,9 @@ final class HardwareMouse {
     private var reverse = false
     private var scrollsLogged = 0 // the first few, to see what a device's raw values look like
     private var lastScrollFirst: Float = 0, lastScrollSecond: Float = 0
+    private var lastRawMove = Date.distantPast
+    private var movesLogged = 0
+    private let pointerDrag = PointerDrag()
 
     func start() {
         let defaults = UserDefaults.standard
@@ -218,9 +221,13 @@ final class HardwareMouse {
             HengeLog.log("input", "pointer lock: \(locked ? "on" : "off")")
         })
         PointerLock.set(true)
+        movesLogged = 0
+        pointerDrag.moved = { [weak self] dx, dy in self?.dragged(dx, dy) }
+        pointerDrag.install()
     }
 
     func stop() {
+        pointerDrag.remove()
         PointerLock.set(false)
         releaseButtons()
         observers.forEach(NotificationCenter.default.removeObserver)
@@ -244,7 +251,10 @@ final class HardwareMouse {
         guard let input = mouse.mouseInput, !mice.contains(where: { $0 === mouse }) else { return }
         mice.append(mouse)
         HengeLog.log("input", "mouse: \(mouse.vendorName ?? "?"), right button \(input.rightButton != nil), middle \(input.middleButton != nil)")
-        input.mouseMovedHandler = { [weak self] _, dx, dy in self?.moved(dx, dy) }
+        input.mouseMovedHandler = { [weak self] _, dx, dy in
+            self?.lastRawMove = Date()
+            self?.moved(dx, dy)
+        }
         input.leftButton.pressedChangedHandler = { [weak self] _, _, pressed in self?.button(0, pressed) }
         input.rightButton?.pressedChangedHandler = { [weak self] _, _, pressed in self?.button(1, pressed) }
         input.middleButton?.pressedChangedHandler = { [weak self] _, _, pressed in self?.button(2, pressed) }
@@ -260,6 +270,18 @@ final class HardwareMouse {
         restX -= x
         restY -= y
         henge_vm_mouse_move(Int32(x), Int32(y))
+    }
+
+    /// Without the pointer locked (an iPhone never locks it), iOS can keep a held button's motion to itself
+    /// as a drag of its own pointer, and GameController then reports none: a held icon would not move.
+    /// The drag's own travel stands in, only while GameController is silent. In points, so about doubled.
+    private func dragged(_ dx: CGFloat, _ dy: CGFloat) {
+        guard Date().timeIntervalSince(lastRawMove) > 0.15 else { return }
+        if movesLogged < 8 {
+            movesLogged += 1
+            HengeLog.log("input", "physical mouse: held motion taken from the pointer's drag (\(dx), \(dy))")
+        }
+        moved(Float(dx) * 2, Float(-dy) * 2)
     }
 
     private func button(_ physicalButton: Int32, _ pressed: Bool) {
@@ -306,4 +328,41 @@ final class HardwareMouse {
         let units = Int32(min(32, (22 * scale * abs(value).squareRoot()).rounded()))
         return value < 0 ? -units : units
     }
+}
+
+/// Follows a drag made with the system's pointer (a mouse button held), anywhere in the app's windows,
+/// without taking it from the views under it.
+final class PointerDrag: NSObject, UIGestureRecognizerDelegate {
+    var moved: ((CGFloat, CGFloat) -> Void)?
+    private var recognizers: [UIPanGestureRecognizer] = []
+
+    func install() {
+        remove()
+        let windows = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap(\.windows)
+        for window in windows {
+            let pan = UIPanGestureRecognizer(target: self, action: #selector(panned(_:)))
+            pan.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)]
+            pan.cancelsTouchesInView = false
+            pan.delaysTouchesBegan = false
+            pan.delaysTouchesEnded = false
+            pan.delegate = self
+            window.addGestureRecognizer(pan)
+            recognizers.append(pan)
+        }
+    }
+
+    func remove() {
+        for pan in recognizers { pan.view?.removeGestureRecognizer(pan) }
+        recognizers.removeAll()
+    }
+
+    @objc private func panned(_ pan: UIPanGestureRecognizer) {
+        guard pan.state == .changed, let view = pan.view else { return }
+        let travel = pan.translation(in: view)
+        pan.setTranslation(.zero, in: view)
+        if travel != .zero { moved?(travel.x, travel.y) }
+    }
+
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                           shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool { true }
 }
