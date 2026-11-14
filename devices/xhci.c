@@ -1190,6 +1190,22 @@ void hv_xhci_pointer(HvXhci *x, int px, int py) {
     hv_machine_wake(x->m);
 }
 
+/* A button of the absolute pointer (0 left, 1 right, 2 middle). It goes in a report of its own, at the
+   place the pointer is, so a click lands exactly there: a click from the relative mouse is another
+   device's, and macOS can put it somewhere else. A press or a release is never replaced by a later
+   report. */
+void hv_xhci_pointer_button(HvXhci *x, int button, int down) {
+    if (!x || !ab_on || button < 0 || button > 2) return;
+    pthread_mutex_lock(&x->mu);
+    uint8_t *s = x->ab_state;
+    uint8_t bit = (uint8_t)(1u << button);
+    s[0] = down ? s[0] | bit : s[0] & (uint8_t)~bit;
+    if (x->ab_rtail - x->ab_rhead >= HV_AB_REPORTS) memcpy(x->ab_reports[(x->ab_rtail - 1) % HV_AB_REPORTS], s, HV_AB_REPORT_LEN);
+    else memcpy(x->ab_reports[x->ab_rtail++ % HV_AB_REPORTS], s, HV_AB_REPORT_LEN);
+    pthread_mutex_unlock(&x->mu);
+    hv_machine_wake(x->m);
+}
+
 void hv_xhci_poll(HvXhci *x) {
     if (!x) return;
     for (int slot = 1; slot <= HV_XHCI_SLOTS; slot++)

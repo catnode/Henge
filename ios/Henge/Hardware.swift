@@ -233,6 +233,7 @@ final class HardwareMouse {
     private var placesLogged = 0
     private var swallowed: Set<Int32> = [] // buttons pressed with the pointer off the Mac's screen
     private var forwarded: Set<Int32> = []
+    private var onPointer: Set<Int32> = [] // the Mac's buttons held through its absolute pointer, not its mouse
 
     func start() {
         let defaults = UserDefaults.standard
@@ -292,7 +293,10 @@ final class HardwareMouse {
     }
 
     func releaseButtons() {
-        for button in buttons.releaseAll() { henge_vm_mouse_button(button, 0) }
+        for button in buttons.releaseAll() {
+            if onPointer.remove(button) != nil { henge_vm_mouse_at_button(button, 0) } else { henge_vm_mouse_button(button, 0) }
+        }
+        onPointer.removeAll()
         swallowed.removeAll()
         forwarded.removeAll()
     }
@@ -396,7 +400,17 @@ final class HardwareMouse {
             buttonsLogged += 1
             HengeLog.log("input", "physical mouse button: raw=\(physicalButton) guest=\(guestButton) \(pressed ? "down" : "up")")
         }
-        henge_vm_mouse_button(guestButton, pressed ? 1 : 0)
+        // While the Mac's pointer follows the system's, the button is that same pointing device's: the click is
+        // then exactly where the pointer was put. From the Mac's other mouse, the pointer jumped at a click.
+        if pressed, follow, let p = pointerAt, overScreen {
+            placed(p)
+            onPointer.insert(guestButton)
+            henge_vm_mouse_at_button(guestButton, 1)
+        } else if !pressed, onPointer.remove(guestButton) != nil {
+            henge_vm_mouse_at_button(guestButton, 0)
+        } else {
+            henge_vm_mouse_button(guestButton, pressed ? 1 : 0)
+        }
         if !pressed { StickyKeys.shared.releaseAll() }
     }
 

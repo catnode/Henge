@@ -38,6 +38,7 @@ struct SessionView: View {
     @State private var showRevealHint = false
     @State private var fullScreen = false // nothing over the Mac at all: no controls, no status bar
     @AppStorage(MacKeyboard.compactKey) private var compactKeys = true
+    @AppStorage(MacKeyboard.hidesKey) private var hidesKeysForKeyboard = false
     @AppStorage(Device.followPostureKey) private var screenFollows = false
     @State private var liveScreen: CGSize? // the Mac's screen, once it was changed while running
     @State private var sideways = false
@@ -65,7 +66,7 @@ struct SessionView: View {
                               height: geo.size.height + insets.top + insets.bottom)
             let landscape = full.width > full.height
             let layout = Layout(full: full, insets: insets, landscape: landscape, zoomed: zoomed, typing: typing, centre: zoomCentre, aspect: aspectNow,
-                                drawsKeyboard: !attachedKeyboard.present, fullScreen: fullScreen,
+                                drawsKeyboard: !(attachedKeyboard.present && hidesKeysForKeyboard), fullScreen: fullScreen,
                                 padButtons: inputMode != .touchscreen)
             // A mouse's pointer on a phone: the Mac's pointer goes where it is over this rectangle.
             let _ = HardwareMouse.shared.screen = display.isExternal ? .null : layout.screen

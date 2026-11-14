@@ -17,6 +17,8 @@ struct MacKeyboard: UIViewRepresentable {
     var compact = MacKeyboard.isCompact
 
     static let compactKey = "henge.keyboard.compact"
+    /// Whether the drawn keyboard gives its room to the trackpad while a real keyboard is connected.
+    static let hidesKey = "henge.keyboard.hidesForReal"
     static var isCompact: Bool { UserDefaults.standard.object(forKey: compactKey) as? Bool ?? true }
 
     func makeUIView(context: Context) -> KeyboardPad { KeyboardPad(macBook: macBook, compact: compact) }

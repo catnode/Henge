@@ -692,6 +692,18 @@ void hv_vm_mouse_at(int x, int y) {
     dispatch_async_f(pointer_queue(), (void *)(intptr_t)(x << 16 | y), at_now);
 }
 
+static void at_button_now(void *ctx) {
+    if (atomic_load(&input_stopping)) return;
+    intptr_t v = (intptr_t)ctx;
+    hv_xhci_pointer_button(board.usb, (int)(v >> 1), (int)(v & 1));
+}
+
+/* A button of the absolute pointer: in the same queue as its places, so each click is where the pointer was put. */
+void hv_vm_mouse_at_button(int button, int down) {
+    if (button < 0 || button > 2) return;
+    dispatch_async_f(pointer_queue(), (void *)(intptr_t)(button << 1 | !!down), at_button_now);
+}
+
 static void left_update(void) {
     int down = left_user || left_click;
     if (down == left_sent) return;

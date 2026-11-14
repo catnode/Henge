@@ -214,6 +214,8 @@
 "Bluetooth Mouse" = "蓝牙鼠标";
 "Pointer speed" = "指针速度";
 "Reverse scrolling" = "反向滚动";
+"Hide it when a real keyboard is connected" = "连接实体键盘时隐藏";
+"Some Bluetooth mice also count as a keyboard: with this on, the drawn keyboard would go while one is connected." = "有些蓝牙鼠标也会被系统当成键盘：打开此项后，连着这种鼠标时虚拟键盘会消失。";
 "Keyboard on the lower half" = "下半屏键盘";
 "Layout" = "布局";
 "Fits the phone" = "适配手机";

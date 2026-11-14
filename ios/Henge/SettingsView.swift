@@ -14,6 +14,7 @@ struct SettingsView: View {
     @AppStorage(Device.followPostureKey) private var screenFollows = false
     @AppStorage(Device.zoomKey) private var screenZoom = 125
     @AppStorage(MacKeyboard.compactKey) private var compactKeys = true
+    @AppStorage(MacKeyboard.hidesKey) private var hidesKeysForKeyboard = false
     @AppStorage(EngineTuning.refreshKey) private var refreshRate = 60
     @AppStorage(EngineTuning.fastFlushKey) private var fastFlush = true
     @AppStorage(EngineTuning.wfiSpinKey) private var wfiSpin = false
@@ -143,6 +144,9 @@ struct SettingsView: View {
                         }
                         .pickerStyle(.segmented)
                         Text("Fits the phone has five rows of larger keys that fill the room, with esc beside the digits. MacBook has a MacBook's six rows and key shapes, with the function keys.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                        Toggle("Hide it when a real keyboard is connected", isOn: $hidesKeysForKeyboard)
+                        Text("Some Bluetooth mice also count as a keyboard: with this on, the drawn keyboard would go while one is connected.")
                             .font(.footnote).foregroundStyle(.secondary)
                     }
                     .listRowBackground(Desk.card)
