@@ -417,3 +417,10 @@
 "Could not run it: %@" = "无法运行：%@";
 "Finished with code %@." = "已结束，退出码 %@。";
 "This app has no menus" = "这个应用没有菜单";
+"The previous machine has not been released." = "上一台机器还没有释放。请彻底退出 Henge 再重新打开。";
+"The ROM, disk and auxiliary storage are all needed." = "缺少 ROM、磁盘或辅助存储，三者都需要。";
+"Cannot open the disk image." = "无法打开磁盘映像。";
+"Cannot open the auxiliary storage." = "无法打开辅助存储。";
+"Cannot set up the JIT region." = "无法设置 JIT 代码区。请确认 JIT 已开启。";
+"Cannot build the machine (not enough memory for the guest's RAM?)." = "无法建立机器：放不下这台 Mac 的内存。请把这台 Mac 的内存调小，或在“设置 › 性能”里把代码缓存改成 512 MB，然后彻底退出 Henge 再重新打开。";
+"Cannot read the ROM (AVPBooter.vmapple2.bin)." = "无法读取 ROM（AVPBooter.vmapple2.bin）。";
