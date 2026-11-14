@@ -40,8 +40,12 @@ enum GuestMemory {
             .volumeAvailableCapacityForImportantUsage ?? 0
         let room = free > 0 ? UInt64(max(free - (2 << 30), 0)) >> 20 : UInt64.max
         let reach = henge_largest_mapping_mb()
-        let ram = min(UInt64(mac.ramMB), room, reach > 512 ? reach - 512 : 0) / 512 * 512
-        HengeLog.log("session", "guest RAM \(ram) MB (asked \(mac.ramMB), disk room \(room), largest mapping \(reach))")
+        // What the engine maps for itself before the Mac's memory, out of the same piece of address space:
+        // the translator's records come to about three quarters of the code cache. Without extended
+        // addressing that piece is 4 GB, and a 1.5 GB cache left a 3.5 GB Mac nowhere to go (iPhone Duo).
+        let kept = 512 + UInt64(JITBootstrap.jitBytes >> 20) * 3 / 4
+        let ram = min(UInt64(mac.ramMB), room, reach > kept ? reach - kept : 0) / 512 * 512
+        HengeLog.log("session", "guest RAM \(ram) MB (asked \(mac.ramMB), disk room \(room), largest mapping \(reach), kept back \(kept))")
         return ram
     }
 }

@@ -424,3 +424,4 @@
 "Cannot set up the JIT region." = "无法设置 JIT 代码区。请确认 JIT 已开启。";
 "Cannot build the machine (not enough memory for the guest's RAM?)." = "无法建立机器：放不下这台 Mac 的内存。请把这台 Mac 的内存调小，或在“设置 › 性能”里把代码缓存改成 512 MB，然后彻底退出 Henge 再重新打开。";
 "Cannot read the ROM (AVPBooter.vmapple2.bin)." = "无法读取 ROM（AVPBooter.vmapple2.bin）。";
+"Henge can only give this Mac %@ MB of memory right now. Quit Henge (swipe it away) and open it again; if that doesn't help, choose a smaller code cache in Settings." = "Henge 现在只能给这台 Mac %@ MB 内存，太少了。请彻底退出 Henge（在后台把它划掉）再重新打开；还不行的话，在“设置 › 性能”里把代码缓存改小。";

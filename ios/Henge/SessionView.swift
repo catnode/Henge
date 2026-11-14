@@ -634,6 +634,11 @@ struct SessionView: View {
             error = "There is not room for this Mac's memory: it needs a few GB of free storage."
             return
         }
+        // Far less than was asked for: macOS would start and then be closed by iOS, so say why instead.
+        guard ram >= min(UInt64(mac.ramMB), 2048) else {
+            error = "Henge can only give this Mac \(ram) MB of memory right now. Quit Henge (swipe it away) and open it again; if that doesn't help, choose a smaller code cache in Settings."
+            return
+        }
         var buffer = [CChar](repeating: 0, count: 256)
         JITBootstrap.releaseLingeringDebugger()
         Sharing.prepare()
