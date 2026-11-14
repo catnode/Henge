@@ -64,11 +64,17 @@ struct SessionView: View {
                               height: geo.size.height + insets.top + insets.bottom)
             let landscape = full.width > full.height
             let layout = Layout(full: full, insets: insets, landscape: landscape, zoomed: zoomed, typing: typing, centre: zoomCentre, aspect: aspectNow,
-                                drawsKeyboard: !attachedKeyboard.present)
+                                drawsKeyboard: !attachedKeyboard.present, fullScreen: fullScreen,
+                                padButtons: inputMode != .touchscreen)
             // A mouse's pointer on a phone: the Mac's pointer goes where it is over this rectangle.
             let _ = HardwareMouse.shared.screen = display.isExternal ? .null : layout.screen
             ZStack(alignment: .topLeading) {
-                (landscape || zoomed ? Color.black : Desk.page)
+                (landscape || zoomed || layout.flush ? Color.black : Desk.page)
+                if !layout.deck.isEmpty {
+                    MacBookDeck()
+                        .frame(width: layout.deck.width, height: layout.deck.height)
+                        .position(x: layout.deck.midX, y: layout.deck.midY)
+                }
                 // One view in every layout: it holds the layer the engine draws into.
                 BootDisplay(display: display, role: .device)
                     .opacity(display.isExternal ? 0 : 1)
@@ -87,9 +93,9 @@ struct SessionView: View {
                         }
                     }
                     .frame(width: layout.screen.width, height: layout.screen.height)
-                    .clipShape(RoundedRectangle(cornerRadius: layout.fillsPhone ? 0 : 15, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: layout.fillsPhone || layout.flush ? 0 : 15, style: .continuous))
                     .overlay {
-                        if !layout.fillsPhone {
+                        if !layout.fillsPhone && !layout.flush {
                             RoundedRectangle(cornerRadius: 15, style: .continuous).stroke(Color.white.opacity(0.16), lineWidth: 0.5)
                         }
                     }
@@ -248,6 +254,10 @@ struct SessionView: View {
         let toolsY: CGFloat
         let pad: CGRect
         var keys = CGRect.zero // the drawn keyboard, on an unfolded phone held upright
+        var folds = false     // an unfolded phone held upright: the Mac above the hinge
+        var flush = false     // full screen there: the Mac fills the half above the hinge, edge to edge
+        var deck = CGRect.zero // and the half below is a MacBook's deck
+        var padButtons = false // whether that deck's trackpad needs buttons under it (taps don't click)
         let insets: EdgeInsets
         var barY: CGFloat?    // where the controls go in the space beside the screen, if it has room for them
 
@@ -256,7 +266,7 @@ struct SessionView: View {
         }
 
         init(full: CGSize, insets: EdgeInsets, landscape: Bool, zoomed: Bool, typing: Bool, centre: CGPoint, aspect: CGFloat,
-             drawsKeyboard: Bool = false) {
+             drawsKeyboard: Bool = false, fullScreen: Bool = false, padButtons: Bool = false) {
             self.insets = insets
             let big = full.height >= 600 // an iPad on its side, or a window on one
             if zoomed {
@@ -300,6 +310,27 @@ struct SessionView: View {
                 // stays above it and the controls, keyboard and trackpad below, so nothing lies over the
                 // fold and, half folded, it sits like a laptop: screen on the lid, keys and trackpad on the deck.
                 let fold = full.height / 2
+                folds = true
+                if fullScreen {
+                    // A MacBook: the lid is all screen, the deck all keyboard with the trackpad centred under it.
+                    let width = min(full.width, fold * aspect), height = width / aspect
+                    screen = CGRect(x: (full.width - width) / 2, y: (fold - height) / 2, width: width, height: height)
+                    touch = screen
+                    fillsPhone = false
+                    toolsY = fold
+                    flush = true
+                    self.padButtons = padButtons
+                    deck = CGRect(x: 0, y: fold, width: full.width, height: full.height - fold)
+                    let top = fold + 16, bottom = full.height - max(insets.bottom, 12) - 4
+                    var padTop = top
+                    if drawsKeyboard, bottom - top >= 260 {
+                        keys = CGRect(x: 14, y: top, width: full.width - 28, height: ((bottom - top) * 0.6).rounded())
+                        padTop = keys.maxY + 14
+                    }
+                    let padWidth = (full.width * (keys.isEmpty ? 0.7 : 0.5)).rounded()
+                    pad = CGRect(x: (full.width - padWidth) / 2, y: padTop, width: padWidth, height: max(bottom - padTop, 60))
+                    return
+                }
                 let top = insets.top + 6
                 if abs(Device.foldTopInset - insets.top) >= 1, insets.top > 0 {
                     UserDefaults.standard.set(Double(insets.top), forKey: Device.foldTopInsetKey)
@@ -348,6 +379,10 @@ struct SessionView: View {
                 Spacer()
                 tool("plus.magnifyingglass", "Zoom in") { zoomed = true }
                 Spacer()
+                if layout.folds {
+                    tool("arrow.up.left.and.arrow.down.right", "Full screen") { enterFullScreen() }
+                    Spacer()
+                }
                 tool("info.circle", "Details") { showDetails = true }
                 Spacer()
                 tool("power", "Shut down", tint: Desk.bad) { stopTapped() }
@@ -360,11 +395,32 @@ struct SessionView: View {
             .transition(.opacity)
         }
         if !layout.keys.isEmpty {
-            MacKeyboard()
+            MacKeyboard(macBook: layout.flush)
                 .frame(width: layout.keys.width, height: layout.keys.height)
                 .position(x: layout.keys.midX, y: layout.keys.midY)
         }
-        trackpadPanel(layout)
+        if layout.flush { macBookTrackpad(layout) } else { trackpadPanel(layout) }
+    }
+
+    /// A MacBook's trackpad: one plain pad, centred under the keys. Buttons under it only where taps don't click.
+    private func macBookTrackpad(_ layout: Layout) -> some View {
+        VStack(spacing: 0) {
+            Trackpad()
+            if layout.padButtons {
+                Rectangle().fill(Color.black.opacity(0.15)).frame(height: 0.5)
+                HStack(spacing: 0) {
+                    MouseButton(title: "Click", button: 0)
+                    Rectangle().fill(Color.black.opacity(0.15)).frame(width: 0.5)
+                    MouseButton(title: "Right-click", button: 1)
+                }
+                .frame(height: 44)
+            }
+        }
+        .background(Color(white: 0.74))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.black.opacity(0.22), lineWidth: 0.75))
+        .frame(width: layout.pad.width, height: layout.pad.height)
+        .position(x: layout.pad.midX, y: layout.pad.midY)
     }
 
     private func trackpadPanel(_ layout: Layout) -> some View {

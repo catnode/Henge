@@ -7,6 +7,8 @@ import GameController
 /// when let go, so the Mac repeats a held key itself and several can be held together. Shift, Control,
 /// Option and Command stay down from a tap until the next key, so a shortcut takes one finger.
 struct MacKeyboard: View {
+    /// A MacBook's look: black keys with white legends, for the aluminium deck under them.
+    var macBook = false
     @ObservedObject private var sticky = StickyKeys.shared
 
     private struct Key: Identifiable {
@@ -64,7 +66,7 @@ struct MacKeyboard: View {
                 if key.sticks {
                     stickyKey(key).frame(width: unit * key.weight, height: height)
                 } else {
-                    PressedKey(label: key.label, code: key.code).frame(width: unit * key.weight, height: height)
+                    PressedKey(label: key.label, code: key.code, macBook: macBook).frame(width: unit * key.weight, height: height)
                 }
             }
         }
@@ -78,9 +80,9 @@ struct MacKeyboard: View {
         } label: {
             Text(key.label)
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(on ? Color.white : Desk.text)
+                .foregroundStyle(on || macBook ? Color.white : Desk.text)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(on ? Desk.accent : Desk.raised, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                .background(on ? Desk.accent : macBook ? MacBookDeck.key : Desk.raised, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
         }
         .buttonStyle(.plain)
     }
@@ -90,14 +92,16 @@ struct MacKeyboard: View {
 private struct PressedKey: View {
     let label: String
     let code: UInt16
+    var macBook = false
     @State private var down = false
 
     var body: some View {
         Text(label)
             .font(.system(size: label.count > 1 ? 11 : 15, weight: .medium))
-            .foregroundStyle(down ? Color.white : Desk.text)
+            .foregroundStyle(down || macBook ? Color.white : Desk.text)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(down ? Desk.accent : Desk.raised, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+            .background(down ? (macBook ? MacBookDeck.keyDown : Desk.accent) : macBook ? MacBookDeck.key : Desk.raised,
+                        in: RoundedRectangle(cornerRadius: 7, style: .continuous))
             .contentShape(Rectangle())
             .gesture(
                 DragGesture(minimumDistance: 0)
@@ -114,6 +118,22 @@ private struct PressedKey: View {
                     }
             )
             .accessibilityLabel(label.isEmpty ? "space" : label)
+    }
+}
+
+/// The half of an unfolded phone below its hinge, in full screen: a MacBook's aluminium deck, with the
+/// hinge's shadow along its top edge.
+struct MacBookDeck: View {
+    static let key = Color(white: 0.09)
+    static let keyDown = Color(white: 0.32)
+
+    var body: some View {
+        LinearGradient(colors: [Color(white: 0.80), Color(white: 0.84), Color(white: 0.78)], startPoint: .top, endPoint: .bottom)
+            .overlay(alignment: .top) {
+                LinearGradient(colors: [Color.black.opacity(0.55), Color.black.opacity(0)], startPoint: .top, endPoint: .bottom)
+                    .frame(height: 7)
+            }
+            .allowsHitTesting(false)
     }
 }
 

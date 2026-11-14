@@ -28,10 +28,11 @@ enum Device {
     /// A Mac's screen for the half above the hinge: the shape of the room SessionView's layout leaves it
     /// there (from the status bar down to the fold, the full width), so it fills that half edge to edge.
     static var laptopScreen: (width: Int, height: Int) {
+        // The whole half, edge to edge: what full screen shows there. Out of full screen the status bar
+        // takes some of the half's height, and the Mac is a little narrower than the phone.
         let size = UIScreen.main.bounds.size
         let wide = min(size.width, size.height), tall = max(size.width, size.height)
-        let room = max(tall / 2 - 8 - foldTopInset - 6, 120)
-        let shape = max(wide - 16, 1) / room
+        let shape = max(wide, 1) / max(tall / 2, 120)
         return (1920, min(max(Int((1920 / shape / 8).rounded()) * 8, 900), 1440))
     }
 
