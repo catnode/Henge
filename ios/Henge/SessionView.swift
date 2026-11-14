@@ -38,6 +38,7 @@ struct SessionView: View {
     @State private var showRevealHint = false
     @State private var fullScreen = false // nothing over the Mac at all: no controls, no status bar
     @AppStorage(MacKeyboard.compactKey) private var compactKeys = true
+    @AppStorage(Device.cornerInsetKey) private var cornerInset = 0
     @AppStorage(MacKeyboard.hidesKey) private var hidesKeysForKeyboard = false
     @AppStorage(Device.followPostureKey) private var screenFollows = false
     @State private var liveScreen: CGSize? // the Mac's screen, once it was changed while running
@@ -67,7 +68,7 @@ struct SessionView: View {
             let landscape = full.width > full.height
             let layout = Layout(full: full, insets: insets, landscape: landscape, zoomed: zoomed, typing: typing, centre: zoomCentre, aspect: aspectNow,
                                 drawsKeyboard: !(attachedKeyboard.present && hidesKeysForKeyboard), fullScreen: fullScreen,
-                                padButtons: inputMode != .touchscreen)
+                                padButtons: inputMode != .touchscreen, corners: CGFloat(cornerInset))
             // A mouse's pointer on a phone: the Mac's pointer goes where it is over this rectangle.
             let _ = HardwareMouse.shared.screen = display.isExternal ? .null : layout.screen
             ZStack(alignment: .topLeading) {
@@ -268,7 +269,7 @@ struct SessionView: View {
         }
 
         init(full: CGSize, insets: EdgeInsets, landscape: Bool, zoomed: Bool, typing: Bool, centre: CGPoint, aspect: CGFloat,
-             drawsKeyboard: Bool = false, fullScreen: Bool = false, padButtons: Bool = false) {
+             drawsKeyboard: Bool = false, fullScreen: Bool = false, padButtons: Bool = false, corners: CGFloat = 0) {
             self.insets = insets
             let big = full.height >= 600 // an iPad on its side, or a window on one
             if zoomed {
@@ -287,8 +288,9 @@ struct SessionView: View {
                 let bar: CGFloat = 62
                 let room = typing ? full.height - insets.bottom - insets.top - bar - 8 : full.height
                 // An iPad keeps clear of its side insets; a big iPhone (iPhone Duo) fills edge to edge.
-                let side = Device.isPad ? 2 * max(insets.leading, insets.trailing) : 0
-                let height = max(min(room, (full.width - side) / aspect), 200)
+                // A phone's rounded corners cut the menu bar's ends and the Dock's: asked to, the Mac keeps inside them.
+                let side = Device.isPad ? 2 * max(insets.leading, insets.trailing) : 2 * corners
+                let height = max(min(room - (typing || Device.isPad ? 0 : 2 * corners), (full.width - side) / aspect), 200)
                 let width = height * aspect
                 let y = typing ? insets.top + bar : (full.height - height) / 2
                 screen = CGRect(x: (full.width - width) / 2, y: y, width: width, height: height)
@@ -315,8 +317,9 @@ struct SessionView: View {
                 folds = true
                 if fullScreen {
                     // A MacBook: the lid is all screen, the deck all keyboard with the trackpad centred under it.
-                    let width = min(full.width, fold * aspect), height = width / aspect
-                    screen = CGRect(x: (full.width - width) / 2, y: (fold - height) / 2, width: width, height: height)
+                    // The lid's two rounded corners are at its top: asked to, the Mac keeps inside them.
+                    let width = min(full.width - 2 * corners, (fold - corners) * aspect), height = width / aspect
+                    screen = CGRect(x: (full.width - width) / 2, y: corners + (fold - corners - height) / 2, width: width, height: height)
                     touch = screen
                     fillsPhone = false
                     toolsY = fold

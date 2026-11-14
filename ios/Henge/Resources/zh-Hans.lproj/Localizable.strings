@@ -214,6 +214,11 @@
 "Bluetooth Mouse" = "蓝牙鼠标";
 "Pointer speed" = "指针速度";
 "Reverse scrolling" = "反向滚动";
+"Keep clear of the rounded corners" = "避开屏幕圆角";
+"A little" = "一点";
+"More" = "较多";
+"Fully" = "完全";
+"The phone's rounded corners cut off the ends of the Mac's menu bar and Dock. This makes the Mac's picture a little smaller so they show, with a thin black edge around it." = "手机屏幕的圆角会挡住 Mac 菜单栏和程序坞的两端。打开后 Mac 画面会略微缩小，让它们完整显示，四周会有一圈细黑边。";
 "Hide it when a real keyboard is connected" = "连接实体键盘时隐藏";
 "Some Bluetooth mice also count as a keyboard: with this on, the drawn keyboard would go while one is connected." = "有些蓝牙鼠标也会被系统当成键盘：打开此项后，连着这种鼠标时虚拟键盘会消失。";
 "Keyboard on the lower half" = "下半屏键盘";

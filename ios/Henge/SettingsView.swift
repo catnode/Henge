@@ -13,6 +13,7 @@ struct SettingsView: View {
     @AppStorage(HardwareMouse.followKey) private var followPointer = !Device.isPad
     @AppStorage(Device.followPostureKey) private var screenFollows = false
     @AppStorage(Device.zoomKey) private var screenZoom = 125
+    @AppStorage(Device.cornerInsetKey) private var cornerInset = 0
     @AppStorage(MacKeyboard.compactKey) private var compactKeys = true
     @AppStorage(MacKeyboard.hidesKey) private var hidesKeysForKeyboard = false
     @AppStorage(EngineTuning.refreshKey) private var refreshRate = 60
@@ -158,6 +159,14 @@ struct SettingsView: View {
                             Text("Largest").tag(175)
                         }
                         Text("Larger makes the Mac's text, menus and windows bigger on the phone, with less room on its desktop. It applies the next time a Mac starts.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                        Picker("Keep clear of the rounded corners", selection: $cornerInset) {
+                            Text("Off").tag(0)
+                            Text("A little").tag(8)
+                            Text("More").tag(14)
+                            Text("Fully").tag(20)
+                        }
+                        Text("The phone's rounded corners cut off the ends of the Mac's menu bar and Dock. This makes the Mac's picture a little smaller so they show, with a thin black edge around it.")
                             .font(.footnote).foregroundStyle(.secondary)
                         Toggle("Screen follows how the phone is held", isOn: $screenFollows)
                         Text("A running Mac's screen changes shape when you turn the phone: it fills the whole phone on its side, and the half above the hinge when upright. Windows may rearrange each time. If the Mac's picture freezes or goes black, turn this off and restart the Mac. Experimental.")

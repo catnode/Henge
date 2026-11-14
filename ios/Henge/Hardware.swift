@@ -39,6 +39,8 @@ enum Device {
     /// How large the Mac draws everything, in percent: an unfolded phone is far smaller than the monitor
     /// 1920 pixels across are meant for. The Mac gets that many fewer pixels in the same shape, and the
     /// phone shows each larger. Only phones that unfold have the choice.
+    /// Points the Mac keeps from the edges of an unfolding phone, so its rounded corners cut nothing off.
+    static let cornerInsetKey = "henge.display.cornerInset"
     static let zoomKey = "henge.display.zoom"
     static let zooms = [100, 125, 150, 175]
     static var zoom: Int {
