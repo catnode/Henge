@@ -10,6 +10,8 @@ struct SessionView: View {
     let close: () -> Void
 
     @StateObject private var display = DisplayRouter()
+    @StateObject private var hinge = HingeMonitor()
+    @StateObject private var attachedKeyboard = AttachedKeyboard()
     @State private var error: String?
     @State private var state: Int32 = 0
     @State private var bootAttempt = 0
@@ -57,7 +59,8 @@ struct SessionView: View {
             let full = CGSize(width: geo.size.width + insets.leading + insets.trailing,
                               height: geo.size.height + insets.top + insets.bottom)
             let landscape = full.width > full.height
-            let layout = Layout(full: full, insets: insets, landscape: landscape, zoomed: zoomed, typing: typing, centre: zoomCentre, aspect: mac.aspect)
+            let layout = Layout(full: full, insets: insets, landscape: landscape, zoomed: zoomed, typing: typing, centre: zoomCentre, aspect: mac.aspect,
+                                drawsKeyboard: !attachedKeyboard.present)
             ZStack(alignment: .topLeading) {
                 (landscape || zoomed ? Color.black : Desk.page)
                 // One view in every layout: it holds the layer the engine draws into.
@@ -142,6 +145,7 @@ struct SessionView: View {
                 }
                 if let error { errorCard(error, layout) }
                 KeyboardCatcher(active: $typing).frame(width: 0, height: 0)
+                if Device.isFoldable { HingeSensor(monitor: hinge).frame(width: 0, height: 0) }
             }
             .frame(width: full.width, height: full.height)
             .ignoresSafeArea()
@@ -176,6 +180,11 @@ struct SessionView: View {
             zoomFollowing = on ? Task { await followPointer() } : nil
         }
         .onChange(of: pointerNeeded) { PointerLock.set(!$0) }
+        .onChange(of: hinge.posture) { posture in
+            // Half folded, a laptop: upright, the Mac above the hinge. Opened flat, the Mac fills the screen.
+            if posture != .unknown { zoomed = false }
+            HingeMonitor.turn(for: posture)
+        }
         .onChange(of: scenePhase) { phase in
             guard phase != .active else {
                 display.refresh()
@@ -224,6 +233,7 @@ struct SessionView: View {
         let fillsPhone: Bool
         let toolsY: CGFloat
         let pad: CGRect
+        var keys = CGRect.zero // the drawn keyboard, on an unfolded phone held upright
         let insets: EdgeInsets
         var barY: CGFloat?    // where the controls go in the space beside the screen, if it has room for them
 
@@ -231,7 +241,8 @@ struct SessionView: View {
             CGSize(width: min(touch.width / max(screen.width, 1), 1), height: min(touch.height / max(screen.height, 1), 1))
         }
 
-        init(full: CGSize, insets: EdgeInsets, landscape: Bool, zoomed: Bool, typing: Bool, centre: CGPoint, aspect: CGFloat) {
+        init(full: CGSize, insets: EdgeInsets, landscape: Bool, zoomed: Bool, typing: Bool, centre: CGPoint, aspect: CGFloat,
+             drawsKeyboard: Bool = false) {
             self.insets = insets
             let big = full.height >= 600 // an iPad on its side, or a window on one
             if zoomed {
@@ -272,8 +283,8 @@ struct SessionView: View {
                 pad = .zero
             } else if !Device.isPad, full.width >= Device.foldWidth {
                 // An unfolded phone held upright (iPhone Duo): the hinge runs across the middle. The Mac
-                // stays above it and the controls and trackpad below, so nothing lies over the fold and,
-                // half folded, it sits like a laptop: screen on the lid, trackpad on the deck.
+                // stays above it and the controls, keyboard and trackpad below, so nothing lies over the
+                // fold and, half folded, it sits like a laptop: screen on the lid, keys and trackpad on the deck.
                 let fold = full.height / 2
                 let top = insets.top + 6
                 let room = max(fold - 8 - top, 120)
@@ -283,8 +294,15 @@ struct SessionView: View {
                 touch = screen
                 fillsPhone = false
                 toolsY = fold + 8
-                let padTop = typing ? fold + 8 : toolsY + 54 + 10
+                var padTop = typing ? fold + 8 : toolsY + 54 + 10
                 let bottom = full.height - insets.bottom - (typing ? 8 : 0)
+                // The drawn keyboard takes most of the deck and leaves the trackpad a strip, as on a laptop.
+                // With iOS's keyboard up, or a real one attached, the trackpad has it all.
+                if drawsKeyboard, !typing, bottom - padTop >= 260 {
+                    let height = min(((bottom - padTop) * 0.6).rounded(), 230)
+                    keys = CGRect(x: 8, y: padTop, width: full.width - 16, height: height)
+                    padTop = keys.maxY + 8
+                }
                 pad = CGRect(x: 8, y: padTop, width: full.width - 16, height: max(bottom - padTop, 60))
             } else {
                 let width = full.width - 16
@@ -323,6 +341,11 @@ struct SessionView: View {
             .overlay(Capsule().stroke(Desk.hairline, lineWidth: 0.5))
             .position(x: layout.pad.midX, y: layout.toolsY + 27)
             .transition(.opacity)
+        }
+        if !layout.keys.isEmpty {
+            MacKeyboard()
+                .frame(width: layout.keys.width, height: layout.keys.height)
+                .position(x: layout.keys.midX, y: layout.keys.midY)
         }
         trackpadPanel(layout)
     }
