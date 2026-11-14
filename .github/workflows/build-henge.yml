@@ -110,6 +110,8 @@ jobs:
           grep -n -B40 -A6 -E "error:" "$LOG" | tail -n 400
           # A compiler that crashed or a failed command says no "error:". Say what did fail, briefly.
           grep -n -A25 -E "Stack dump|failed with a nonzero exit code|The following build commands failed|fatal error" "$LOG" | cut -c1-400 | tail -n 120 || true
+          # A script phase (the engine's make) that failed: what it said last.
+          grep -n -B30 -E "make(\[[0-9]+\])?: \*\*\*" "$LOG" | cut -c1-400 | tail -n 80 || true
 
       # The interface's translations ride in .lproj folders; a build without them would be English only.
       - name: Check the translations are in the app
