@@ -185,7 +185,11 @@ final class HardwareMouse {
     static let scrollSpeedKey = "henge.mouse.scrollSpeed"
     static let followKey = "henge.mouse.followPointer"
     /// Off unless asked for: it gives the Mac one more USB device, and a session reads it when the Mac starts.
-    static var followsSystemPointer: Bool { !Device.isPad && UserDefaults.standard.bool(forKey: followKey) }
+    static var followsSystemPointer: Bool {
+        guard !Device.isPad else { return false }
+        let defaults = UserDefaults.standard
+        return defaults.object(forKey: followKey) == nil ? true : defaults.bool(forKey: followKey)
+    }
 
     /// Where the Mac's picture is in the window, in points: the session's layout keeps it current.
     /// Null while the Mac is on another display.
@@ -310,9 +314,12 @@ final class HardwareMouse {
         let now = Date(), continuing = now.timeIntervalSince(lastRawMove) < 0.1
         lastRawMove = now
         if follow, pointerAt != nil {
-            guard continuing, now.timeIntervalSince(lastPlace) > 0.15 else { return }
+            guard continuing, now.timeIntervalSince(lastPlace) > 0.25 else { return }
             unplaced += 1
-            if unplaced > 40 {
+            // A press is followed by its own recognizer, so a few silent moves are a hand's tremble on the button,
+            // not iOS keeping the pointer's place to itself: moving on them pushed the Mac's pointer off the system's.
+            guard unplaced > 20 else { return }
+            if unplaced > 60 {
                 HengeLog.log("input", "physical mouse: iOS stopped reporting its pointer's place; back to raw motion")
                 pointerAt = nil
             }
@@ -432,6 +439,17 @@ final class PointerDrag: NSObject, UIGestureRecognizerDelegate {
             pan.delegate = self
             window.addGestureRecognizer(pan)
             recognizers.append(pan)
+            // A press says where it is from the moment it starts, and at every move: a pan only once it has travelled.
+            let press = UILongPressGestureRecognizer(target: self, action: #selector(pressed(_:)))
+            press.minimumPressDuration = 0
+            press.allowableMovement = .greatestFiniteMagnitude
+            press.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)]
+            press.cancelsTouchesInView = false
+            press.delaysTouchesBegan = false
+            press.delaysTouchesEnded = false
+            press.delegate = self
+            window.addGestureRecognizer(press)
+            recognizers.append(press)
             let hover = UIHoverGestureRecognizer(target: self, action: #selector(hovered(_:)))
             hover.cancelsTouchesInView = false
             hover.delegate = self
@@ -448,6 +466,11 @@ final class PointerDrag: NSObject, UIGestureRecognizerDelegate {
     @objc private func hovered(_ hover: UIHoverGestureRecognizer) {
         guard hover.state == .began || hover.state == .changed, let view = hover.view else { return }
         placed?(hover.location(in: view))
+    }
+
+    @objc private func pressed(_ press: UILongPressGestureRecognizer) {
+        guard let view = press.view else { return }
+        placed?(press.location(in: view))
     }
 
     @objc private func panned(_ pan: UIPanGestureRecognizer) {
