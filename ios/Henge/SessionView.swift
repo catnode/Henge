@@ -3,7 +3,8 @@ import GameController
 
 /// A running Mac. Upright, its screen sits above a trackpad; on its side the screen fills the device
 /// and is its own trackpad. Zoomed in, the screen fills the device either way and follows the pointer.
-/// A keyboard, trackpad or mouse attached to an iPad works throughout.
+/// An unfolded phone held upright keeps the screen above its hinge and the trackpad below it.
+/// A keyboard, trackpad or mouse attached to the device works throughout.
 struct SessionView: View {
     let mac: VirtualMac
     let close: () -> Void
@@ -269,6 +270,22 @@ struct SessionView: View {
                 fillsPhone = true
                 toolsY = 0
                 pad = .zero
+            } else if !Device.isPad, full.width >= Device.foldWidth {
+                // An unfolded phone held upright (iPhone Duo): the hinge runs across the middle. The Mac
+                // stays above it and the controls and trackpad below, so nothing lies over the fold and,
+                // half folded, it sits like a laptop: screen on the lid, trackpad on the deck.
+                let fold = full.height / 2
+                let top = insets.top + 6
+                let room = max(fold - 8 - top, 120)
+                let width = min(full.width - 16, room * aspect)
+                let height = width / aspect
+                screen = CGRect(x: (full.width - width) / 2, y: top + (room - height) / 2, width: width, height: height)
+                touch = screen
+                fillsPhone = false
+                toolsY = fold + 8
+                let padTop = typing ? fold + 8 : toolsY + 54 + 10
+                let bottom = full.height - insets.bottom - (typing ? 8 : 0)
+                pad = CGRect(x: 8, y: padTop, width: full.width - 16, height: max(bottom - padTop, 60))
             } else {
                 let width = full.width - 16
                 let height = width / aspect

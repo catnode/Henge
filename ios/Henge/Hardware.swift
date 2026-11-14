@@ -16,6 +16,18 @@ enum Device {
         return (1920, min(max(Int((1920 / shape / 8).rounded()) * 8, 1080), 1440))
     }
 
+    /// A phone that unfolds (iPhone Duo): opened, even its shorter side is wider than any other phone
+    /// is tall across. Held upright, its hinge runs across the middle of the screen.
+    static let foldWidth: CGFloat = 600
+    static var isFoldable: Bool {
+        guard !isPad else { return false }
+        let size = UIScreen.main.bounds.size
+        return HengeLog.deviceModel == "iPhone19,4" || min(size.width, size.height) >= foldWidth
+    }
+
+    /// A Mac's screen for the half above the hinge: 16:10, which fills that half's width upright.
+    static let laptopScreen: (width: Int, height: Int) = (1920, 1200)
+
     /// Preserve the iPad's shape while reducing the virtual GPU's pixel work.
     static var performanceScreen: (width: Int, height: Int) {
         let fit = fittingScreen

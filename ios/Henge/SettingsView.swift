@@ -63,8 +63,8 @@ struct SettingsView: View {
                         .font(.footnote).foregroundStyle(.secondary)
                 }
                 .listRowBackground(Desk.card)
-                if Device.isPad {
-                    Section("Mouse and Trackpad") {
+                if Device.isPad || Device.isFoldable {
+                    Section(Device.isPad ? "Mouse and Trackpad" : "Bluetooth Mouse") {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Pointer speed")
                             Slider(value: $mouseSpeed, in: 0.5...3)
@@ -77,7 +77,9 @@ struct SettingsView: View {
                         Toggle("Swap physical right and middle buttons", isOn: $swapMouseButtons)
                         Text("Only enable this if your physical mouse's right and middle buttons are reversed in the Mac. Touch controls stay unchanged. Restart the Mac session to apply.")
                             .font(.footnote).foregroundStyle(.secondary)
-                        Text("A Magic Keyboard or a Bluetooth mouse moves the Mac's pointer. Pointer speed changes apply the next time a Mac starts; scroll speed changes apply immediately.")
+                        Text(Device.isPad
+                             ? "A Magic Keyboard or a Bluetooth mouse moves the Mac's pointer. Pointer speed changes apply the next time a Mac starts; scroll speed changes apply immediately."
+                             : "A Bluetooth keyboard types into the Mac and a Bluetooth mouse moves its pointer while a Mac is running. Pointer speed changes apply the next time a Mac starts; scroll speed changes apply immediately.")
                             .font(.footnote).foregroundStyle(.secondary)
                     }
                     .listRowBackground(Desk.card)

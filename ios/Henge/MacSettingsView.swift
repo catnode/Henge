@@ -52,7 +52,7 @@ struct MacSettingsView: View {
                 .padding(.vertical, 10)
                 .deskCard()
 
-                if Device.fittingScreen.height != 1080 {
+                if Device.fittingScreen.height != 1080 || Device.isFoldable {
                     DeskHeading("Screen")
                     VStack(alignment: .leading, spacing: 12) {
                         Picker("Screen", selection: Binding(get: {
@@ -60,6 +60,8 @@ struct MacSettingsView: View {
                             if mac.screen.width == Device.performanceScreen.width,
                                mac.screen.height == Device.performanceScreen.height { return "performance" }
                             if mac.screen.width == 1920, mac.screen.height == 1080 { return "wide" }
+                            if Device.isFoldable, mac.screen.width == Device.laptopScreen.width,
+                               mac.screen.height == Device.laptopScreen.height { return "laptop" }
                             return "fit"
                         }, set: { choice in
                             mac.retina = choice == "retina"
@@ -67,6 +69,7 @@ struct MacSettingsView: View {
                             case "retina": break
                             case "performance": (mac.screenWidth, mac.screenHeight) = Device.performanceScreen
                             case "wide": (mac.screenWidth, mac.screenHeight) = (1920, 1080)
+                            case "laptop": (mac.screenWidth, mac.screenHeight) = Device.laptopScreen
                             default: (mac.screenWidth, mac.screenHeight) = Device.fittingScreen
                             }
                             save()
@@ -76,10 +79,11 @@ struct MacSettingsView: View {
                                 Text("Performance").tag("performance")
                             }
                             Text("Fit this \(Device.name)").tag("fit")
+                            if Device.isFoldable { Text("Laptop").tag("laptop") }
                             Text("16:9").tag("wide")
                         }
                         .pickerStyle(.segmented)
-                        Text("\(mac.screen.width) × \(mac.screen.height). \(Device.isPad ? "Performance renders about 30% fewer pixels. " : "")Changes apply the next time this Mac starts.")
+                        Text("\(mac.screen.width) × \(mac.screen.height). \(Device.isPad ? "Performance renders about 30% fewer pixels. " : "")\(Device.isFoldable ? "Laptop fills the half above the hinge when the phone is upright. " : "")Changes apply the next time this Mac starts.")
                             .font(.system(size: 13)).foregroundStyle(Desk.dim)
                     }
                     .padding(17)
