@@ -37,6 +37,8 @@ enum Device {
 
     /// The safe area above the Mac when an unfolded phone is upright, as the session last saw it (the
     /// screen's shape must not change with how the phone is turned while Settings is open).
+    /// Whether a running Mac's screen changes shape with how an unfolding phone is held (experimental).
+    static let followPostureKey = "henge.display.followPosture"
     static let foldTopInsetKey = "henge.fold.topInset"
     static var foldTopInset: CGFloat {
         let seen = UserDefaults.standard.double(forKey: foldTopInsetKey)

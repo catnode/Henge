@@ -11,6 +11,7 @@ struct SettingsView: View {
     @AppStorage(VolumeClicks.swapKey) private var swapButtons = false
     @AppStorage(PhysicalMouseButtons.swapKey) private var swapMouseButtons = false
     @AppStorage(HardwareMouse.followKey) private var followPointer = !Device.isPad
+    @AppStorage(Device.followPostureKey) private var screenFollows = false
     @AppStorage(EngineTuning.refreshKey) private var refreshRate = 60
     @AppStorage(EngineTuning.fastFlushKey) private var fastFlush = true
     @AppStorage(EngineTuning.wfiSpinKey) private var wfiSpin = false
@@ -132,6 +133,14 @@ struct SettingsView: View {
                         .font(.footnote).foregroundStyle(.secondary)
                 }
                 .listRowBackground(Desk.card)
+                if Device.isFoldable {
+                    Section("Screen") {
+                        Toggle("Screen follows how the phone is held", isOn: $screenFollows)
+                        Text("A running Mac's screen changes shape when you turn the phone: it fills the whole phone on its side, and the half above the hinge when upright. Windows may rearrange each time. If the Mac's picture freezes or goes black, turn this off and restart the Mac. Experimental.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                    .listRowBackground(Desk.card)
+                }
                 Section("Instant Resume") {
                     Toggle("Resume where you left off", isOn: $instantResume)
                     Text("When you leave Henge, the running Mac is saved to storage, and opening it again picks up where it was in a few seconds, even after iOS closes Henge. The save is about the size of the Mac's memory in use, compressed. The Mac pauses while Henge is in the background, so its sound stops. Experimental.")

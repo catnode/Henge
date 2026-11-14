@@ -37,6 +37,9 @@ struct SessionView: View {
     @State private var controlsHidden = false
     @State private var showRevealHint = false
     @State private var fullScreen = false // nothing over the Mac at all: no controls, no status bar
+    @AppStorage(Device.followPostureKey) private var screenFollows = false
+    @State private var liveScreen: CGSize? // the Mac's screen, once it was changed while running
+    @State private var sideways = false
     @State private var pointerRefused = false
     @AppStorage("henge.controls.hintsShown") private var revealHintsShown = 0
     @AppStorage(VolumeClicks.inputModeKey) private var inputMode = VolumeClicks.InputMode.touchscreen
@@ -60,7 +63,7 @@ struct SessionView: View {
             let full = CGSize(width: geo.size.width + insets.leading + insets.trailing,
                               height: geo.size.height + insets.top + insets.bottom)
             let landscape = full.width > full.height
-            let layout = Layout(full: full, insets: insets, landscape: landscape, zoomed: zoomed, typing: typing, centre: zoomCentre, aspect: mac.aspect,
+            let layout = Layout(full: full, insets: insets, landscape: landscape, zoomed: zoomed, typing: typing, centre: zoomCentre, aspect: aspectNow,
                                 drawsKeyboard: !attachedKeyboard.present)
             // A mouse's pointer on a phone: the Mac's pointer goes where it is over this rectangle.
             let _ = HardwareMouse.shared.screen = display.isExternal ? .null : layout.screen
@@ -168,7 +171,14 @@ struct SessionView: View {
                 showRevealHint = false
                 fullScreen = false
             }
-            .onAppear { shown = layout.shown }
+            .onAppear {
+                shown = layout.shown
+                sideways = landscape
+            }
+            .onChange(of: landscape) { now in
+                sideways = now
+                fitScreen(sideways: now)
+            }
             .onChange(of: layout.shown) { shown = $0 }
         }
         .statusBarHidden(zoomed || Device.isPad || fullScreen)
@@ -414,6 +424,22 @@ struct SessionView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) { showRevealHint = false }
     }
 
+    private var screenNow: (width: Int, height: Int) {
+        liveScreen.map { (Int($0.width), Int($0.height)) } ?? mac.screen
+    }
+    private var aspectNow: CGFloat { CGFloat(screenNow.width) / CGFloat(max(screenNow.height, 1)) }
+
+    /// An unfolding phone, if asked to in Settings: the Mac's screen takes the shape of where it is shown, the whole
+    /// phone on its side or the half above the hinge upright. macOS is told its display changed, as for a resized window.
+    private func fitScreen(sideways: Bool) {
+        guard screenFollows, Device.isFoldable, !mac.isRetina, !display.isExternal else { return }
+        let want = sideways ? Device.fittingScreen : Device.laptopScreen
+        guard want.width != screenNow.width || want.height != screenNow.height else { return }
+        HengeLog.log("session", "screen \(screenNow.width)x\(screenNow.height) -> \(want.width)x\(want.height): the phone is \(sideways ? "on its side" : "upright")")
+        henge_vm_resize_display(UInt32(want.width), UInt32(want.height))
+        liveScreen = CGSize(width: want.width, height: want.height)
+    }
+
     /// Only the Mac on the screen: the controls and the status bar go. Four fingers bring them back, and it says so each time.
     private func enterFullScreen() {
         fullScreen = true
@@ -468,7 +494,7 @@ struct SessionView: View {
 
     /// The whole screen, small, with where the zoomed view is on it.
     private func zoomMap(_ layout: Layout) -> some View {
-        let width: CGFloat = 112, height = width / mac.aspect
+        let width: CGFloat = 112, height = width / aspectNow
         let viewW = min(layout.touch.width / layout.screen.width, 1) * width
         let viewH = min(layout.touch.height / layout.screen.height, 1) * height
         let left = (-layout.screen.minX / layout.screen.width) * width
@@ -494,9 +520,9 @@ struct SessionView: View {
         while !Task.isCancelled {
             var x: Int32 = 0, y: Int32 = 0
             if henge_vm_pointer(&x, &y) == 0 {
-                moveZoom(toward: CGPoint(x: CGFloat(x) / CGFloat(mac.screen.width), y: CGFloat(y) / CGFloat(mac.screen.height)))
+                moveZoom(toward: CGPoint(x: CGFloat(x) / CGFloat(screenNow.width), y: CGFloat(y) / CGFloat(screenNow.height)))
             }
-            if tick % 60 == 0, let image = MacPreview.capture(width: 224, height: Int(224 / mac.aspect)) { map = UIImage(cgImage: image) }
+            if tick % 60 == 0, let image = MacPreview.capture(width: 224, height: Int(224 / aspectNow)) { map = UIImage(cgImage: image) }
             tick += 1
             try? await Task.sleep(nanoseconds: 33_000_000)
         }
@@ -670,6 +696,8 @@ struct SessionView: View {
             henge_vm_set_display_mm(0, 0)
         }
         HengeLog.log("session", "screen \(mac.screen.width)x\(mac.screen.height) retina \(mac.isRetina)")
+        liveScreen = nil
+        fitScreen(sideways: sideways)
         var rc: Int32 = -1
         if InstantResume.enabled, let at = InstantResume.saved(for: mac, ramMB: ram, cpus: cpus) {
             HengeLog.log("resume", "picking up the Mac saved \(Int(Date().timeIntervalSince(at))) s ago")

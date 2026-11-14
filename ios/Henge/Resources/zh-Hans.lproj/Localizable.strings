@@ -214,6 +214,8 @@
 "Bluetooth Mouse" = "蓝牙鼠标";
 "Pointer speed" = "指针速度";
 "Reverse scrolling" = "反向滚动";
+"Screen follows how the phone is held" = "屏幕随手机姿势切换";
+"A running Mac's screen changes shape when you turn the phone: it fills the whole phone on its side, and the half above the hinge when upright. Windows may rearrange each time. If the Mac's picture freezes or goes black, turn this off and restart the Mac. Experimental." = "转动手机时，运行中的 Mac 屏幕会跟着改变形状：横屏时铺满整块屏幕，竖着时铺满铰链上方的半屏。每次切换窗口位置可能会重新排列。如果 Mac 画面卡住或变黑，请关闭此项并重新启动 Mac。实验性功能。";
 "Full screen" = "全屏";
 "Tap with four fingers to leave full screen" = "四指轻点屏幕可退出全屏";
 "Mac pointer follows the iPhone's pointer" = "Mac 指针跟随 iPhone 的指针";

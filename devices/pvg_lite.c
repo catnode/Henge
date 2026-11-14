@@ -167,9 +167,18 @@ void hv_pvg_lite_set_size_mm(uint32_t width_mm, uint32_t height_mm) {
     display_mm_h = height_mm;
 }
 
+/* A size the host asked for while the machine runs (height << 16 | width), taken up by the next poll. */
+static _Atomic uint32_t resize_to;
+
 void hv_pvg_lite_set_mode(uint32_t width, uint32_t height) {
     display_w = width;
     display_h = height;
+    atomic_store(&resize_to, 0);
+}
+
+void hv_pvg_lite_resize(uint32_t width, uint32_t height) {
+    if (!width || !height || width > 0xffff || height > 0xffff) return;
+    atomic_store(&resize_to, height << 16 | width);
 }
 
 static void display_set_page(HvPvgLite *p, uint64_t pa) {
@@ -204,6 +213,35 @@ static void display_set_page(HvPvgLite *p, uint64_t pa) {
     __atomic_store_n((uint32_t *)(d + 0x100), 4, __ATOMIC_RELEASE); /* mode change: read when the guest sets its mask */
 #undef PUT32
 #undef PUTF
+}
+
+/* CPU thread: the host wants another size. Before the guest's driver has named its state page, the new size
+   is simply the one it will be given. After, the mode list is rewritten under a new sequence number and the
+   guest is told it changed (event 4), which it acks as it did the first. */
+static void display_resize(HvPvgLite *p) {
+    uint32_t to = atomic_load_explicit(&resize_to, memory_order_relaxed);
+    if (!to) return;
+    uint32_t w = to & 0xffff, h = to >> 16;
+    uint8_t *d = p->display_pa ? hv_phys_ptr(p->m, p->display_pa, 0x4000) : NULL;
+    if (d && d[0xfa9]) return; /* the guest hasn't acked the last list yet: after that */
+    uint32_t taken = to;
+    if (!atomic_compare_exchange_strong(&resize_to, &taken, 0)) return; /* changed meanwhile: next poll */
+    if (w == display_w && h == display_h) return;
+    fprintf(stderr, "hengevm: pvg-lite: display %ux%u -> %ux%u%s\n", display_w, display_h, w, h, d ? "" : " (before the guest's driver)");
+    display_w = w;
+    display_h = h;
+    if (!d) return;
+    uint32_t width_mm = 400, height_mm = 400 * h / w;
+    if (display_mm_w && display_mm_h) width_mm = display_mm_w, height_mm = display_mm_h;
+    *(uint32_t *)(d + 0x14) = height_mm << 16 | width_mm;
+    *(float *)(d + 0x24) = (float)width_mm;
+    *(float *)(d + 0x28) = (float)height_mm;
+    *(uint32_t *)(d + 0x210) = h << 16 | w;
+    *(uint32_t *)(d + 0x200) += 1;
+    d[0xfa9] = 1;
+    *(uint32_t *)(d + 0xfc0) = 1;
+    __atomic_fetch_or((uint32_t *)(d + 0x100), 4, __ATOMIC_RELEASE);
+    hv_gicv3_pend(p->gic, p->gfx_irq);
 }
 
 static void display_ack(HvPvgLite *p, uint32_t seq) {
@@ -733,6 +771,7 @@ static void vblank(HvPvgLite *p) {
 
 void hv_pvg_lite_poll(HvPvgLite *p) {
     if (!p) return;
+    display_resize(p);
     vblank(p);
     uint32_t chans = p->chan_pending;
     if (chans) {
