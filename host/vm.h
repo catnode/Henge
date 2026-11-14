@@ -93,6 +93,8 @@ void hv_vm_key_hid(uint8_t usage, int down); /* HID keyboard usage, which is wha
 void hv_vm_mouse_move(int dx, int dy);
 /* The pointer goes to (x, y), each 0..32767 across the Mac's screen. */
 void hv_vm_mouse_at(int x, int y);
+/* Before the machine starts: whether it has the USB pointing device hv_vm_mouse_at drives. */
+void hv_vm_set_absolute_pointer(int on);
 void hv_vm_mouse_button(int button, int down); /* 0 left, 1 right, 2 middle */
 void hv_vm_mouse_wheel(int dy);
 void hv_vm_mouse_hwheel(int dx);

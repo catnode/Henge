@@ -10,7 +10,7 @@ struct SettingsView: View {
     @AppStorage(VolumeClicks.modeKey) private var volumeMode = VolumeClicks.Mode.delayHold
     @AppStorage(VolumeClicks.swapKey) private var swapButtons = false
     @AppStorage(PhysicalMouseButtons.swapKey) private var swapMouseButtons = false
-    @AppStorage(HardwareMouse.followKey) private var followPointer = !Device.isPad
+    @AppStorage(HardwareMouse.followKey) private var followPointer = false
     @AppStorage(Device.followPostureKey) private var screenFollows = false
     @AppStorage(EngineTuning.refreshKey) private var refreshRate = 60
     @AppStorage(EngineTuning.fastFlushKey) private var fastFlush = true

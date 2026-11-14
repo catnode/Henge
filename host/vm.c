@@ -684,6 +684,8 @@ static void at_now(void *ctx) {
     hv_xhci_pointer(board.usb, (int)(v >> 16) & 0x7fff, (int)v & 0x7fff);
 }
 
+void hv_vm_set_absolute_pointer(int on) { hv_xhci_set_pointer(on); }
+
 void hv_vm_mouse_at(int x, int y) {
     x = x < 0 ? 0 : x > 32767 ? 32767 : x;
     y = y < 0 ? 0 : y > 32767 ? 32767 : y;

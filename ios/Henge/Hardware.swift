@@ -184,6 +184,8 @@ final class HardwareMouse {
     static let reverseKey = "henge.mouse.reverse"
     static let scrollSpeedKey = "henge.mouse.scrollSpeed"
     static let followKey = "henge.mouse.followPointer"
+    /// Off unless asked for: it gives the Mac one more USB device, and a session reads it when the Mac starts.
+    static var followsSystemPointer: Bool { !Device.isPad && UserDefaults.standard.bool(forKey: followKey) }
 
     /// Where the Mac's picture is in the window, in points: the session's layout keeps it current.
     /// Null while the Mac is on another display.
@@ -239,7 +241,7 @@ final class HardwareMouse {
         })
         PointerLock.set(true)
         movesLogged = 0
-        follow = defaults.object(forKey: Self.followKey) == nil ? !Device.isPad : defaults.bool(forKey: Self.followKey)
+        follow = Self.followsSystemPointer
         pointerAt = nil
         unplaced = 0
         placesLogged = 0

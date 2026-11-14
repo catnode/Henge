@@ -747,6 +747,7 @@ struct SessionView: View {
         Sharing.prepare()
         EngineTuning.apply()
         henge_vm_set_display(UInt32(mac.screen.width), UInt32(mac.screen.height))
+        henge_vm_set_absolute_pointer(HardwareMouse.followsSystemPointer ? 1 : 0)
         if mac.isRetina {
             henge_vm_set_display_mm(UInt32(Device.retinaMM.width), UInt32(Device.retinaMM.height))
         } else {

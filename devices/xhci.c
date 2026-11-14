@@ -45,6 +45,13 @@ enum { CC_SUCCESS = 1, CC_TRB_ERROR = 5, CC_STALL = 6, CC_SLOTS_FULL = 9, CC_SLO
 #define SPEED_FULL 1
 #define SPEED_HIGH 2
 
+/* Whether port 3 and its absolute pointer exist. Off, the controller is the two-port one every Mac
+   installed so far has known: the host asks for the pointer before the machine starts. */
+static int ab_on;
+#define NPORTS (ab_on ? HV_XHCI_PORTS : HV_XHCI_PORTS - 1)
+
+void hv_xhci_set_pointer(int on) { ab_on = on != 0; }
+
 /* ---- the devices' descriptors ---- */
 
 /* Port 1: a USB HID 1.11 boot keyboard. */
@@ -755,7 +762,7 @@ static void run_commands(HvXhci *x) {
 /* Port 1 is the full-speed keyboard; port 2 is the high-speed trackpad, as the real
    Magic Trackpad 2 is. */
 static void port_connect(HvXhci *x) {
-    for (int p = 0; p < HV_XHCI_PORTS; p++) {
+    for (int p = 0; p < NPORTS; p++) {
         x->portsc[p] = PORT_PP | PORT_CCS | PORT_CSC | (uint32_t)(p ? SPEED_HIGH : SPEED_FULL) << PORT_SPEED_SHIFT | 7u << PORT_PLS_SHIFT;
         port_event(x, p);
     }
@@ -815,7 +822,7 @@ static void reset(HvXhci *x) {
     x->ab_rhead = x->ab_rtail = 0;
     memset(x->ab_state, 0, sizeof x->ab_state);
     x->ab_delivered = 0;
-    for (int p = 0; p < HV_XHCI_PORTS; p++)
+    for (int p = 0; p < NPORTS; p++)
         x->portsc[p] = PORT_PP | PORT_CCS | PORT_CSC | (uint32_t)(p ? SPEED_HIGH : SPEED_FULL) << PORT_SPEED_SHIFT | 7u << PORT_PLS_SHIFT;
     update_irq(x);
 }
@@ -829,9 +836,9 @@ static uint64_t bar_read(HvPciDev *d, int bar, uint64_t off, unsigned size) {
         if (n++ < 60) fprintf(stderr, "xhci: read +%llx (%u)\n", (unsigned long long)off, size);
     }
     if (off < CAPLENGTH) {
-        static const uint32_t cap[8] = {
+        const uint32_t cap[8] = {
             CAPLENGTH | 0x0100u << 16,                           /* CAPLENGTH, HCIVERSION 1.0 */
-            HV_XHCI_SLOTS | (uint32_t)HV_XHCI_INTRS << 8 | (uint32_t)HV_XHCI_PORTS << 24, /* slots, interrupters, ports */
+            HV_XHCI_SLOTS | (uint32_t)HV_XHCI_INTRS << 8 | (uint32_t)NPORTS << 24, /* slots, interrupters, ports */
             1u << 4,                                             /* ERST max 2 segments */
             0,
             1u | (uint32_t)(XECP / 4) << 16,                     /* 64-bit addressing, extended caps */
@@ -844,7 +851,7 @@ static uint64_t bar_read(HvPciDev *d, int bar, uint64_t off, unsigned size) {
         if (size == 8 && i + 1 < 8) v |= (uint64_t)cap[i + 1] << 32;
         v >>= 8 * (off & 3);
     } else if (off >= XECP && off < XECP + 16) { /* Supported Protocol: USB 2.0 on every port */
-        static const uint32_t ext[4] = {2u | 0x0200u << 16, 0x20425355, 1u | (uint32_t)HV_XHCI_PORTS << 8, 0}; /* ports 1..N */
+        static const uint32_t ext[4] = {2u | 0x0200u << 16, 0x20425355, 1u | 3u << 8, 0}; /* as before the third port */
         uint32_t i = (uint32_t)(off - XECP) / 4;
         v = ext[i];
         if (size == 8 && i + 1 < 4) v |= (uint64_t)ext[i + 1] << 32;
@@ -860,7 +867,7 @@ static uint64_t bar_read(HvPciDev *d, int bar, uint64_t off, unsigned size) {
         case 0x34: v = x->dcbaap >> 32; break;
         case 0x38: v = x->config; break;
         }
-    } else if (off >= PORTREGS && off < PORTREGS + 16u * HV_XHCI_PORTS) {
+    } else if (off >= PORTREGS && off < PORTREGS + 16u * NPORTS) {
         int p = (int)(off - PORTREGS) / 16;
         v = (off - PORTREGS) % 16 == 0 ? x->portsc[p] : 0;
     } else if (off >= RT && off < RT + 0x20 + 32u * HV_XHCI_INTRS) {
@@ -902,7 +909,7 @@ static void bar_write(HvPciDev *d, int bar, uint64_t off, uint64_t v, unsigned s
             if ((v & 1) && !(x->usbcmd & 1)) { /* run */
                 x->usbcmd = (uint32_t)v;
                 x->usbsts &= ~1u;
-                for (int p = 0; p < HV_XHCI_PORTS; p++)
+                for (int p = 0; p < NPORTS; p++)
                     if (x->portsc[p] & PORT_CSC) port_event(x, p);
             } else if (!(v & 1)) {
                 x->usbcmd = (uint32_t)v;
@@ -934,7 +941,7 @@ static void bar_write(HvPciDev *d, int bar, uint64_t off, uint64_t v, unsigned s
         case 0x34: set64(&x->dcbaap, r - 0x30, v, size); x->dcbaap &= ~0x3full; break;
         case 0x38: x->config = (uint32_t)v; break;
         }
-    } else if (off >= PORTREGS && off < PORTREGS + 16u * HV_XHCI_PORTS) {
+    } else if (off >= PORTREGS && off < PORTREGS + 16u * NPORTS) {
         if ((off - PORTREGS) % 16 == 0) port_write(x, (int)(off - PORTREGS) / 16, (uint32_t)v);
     } else if (off >= RT + 0x20 && off < RT + 0x20 + 32u * HV_XHCI_INTRS) {
         struct HvXhciIntr *it = &x->intr[(off - RT - 0x20) / 32];
@@ -1170,7 +1177,7 @@ void hv_xhci_touch_button(HvXhci *x, int down) {
 /* ---- the absolute pointer's reports ---- */
 
 void hv_xhci_pointer(HvXhci *x, int px, int py) {
-    if (!x) return;
+    if (!x || !ab_on) return;
     px = px < 0 ? 0 : px > HV_AB_RANGE ? HV_AB_RANGE : px;
     py = py < 0 ? 0 : py > HV_AB_RANGE ? HV_AB_RANGE : py;
     pthread_mutex_lock(&x->mu);

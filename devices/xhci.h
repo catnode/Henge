@@ -116,6 +116,8 @@ void hv_xhci_touch_button(HvXhci *x, int down);
 /* Any thread: the pointer is at (px, py), each 0..HV_AB_RANGE across the guest's screen. Its buttons
    stay with whichever device the caller already clicks with. */
 void hv_xhci_pointer(HvXhci *x, int px, int py);
+/* Before the machine starts: whether it has port 3's absolute pointer at all (default: no). */
+void hv_xhci_set_pointer(int on);
 /* CPU thread: hand waiting reports to the guest. */
 void hv_xhci_poll(HvXhci *x);
 
